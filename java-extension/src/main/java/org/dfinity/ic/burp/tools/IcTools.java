@@ -26,7 +26,7 @@ public interface IcTools {
     enum IdentityType {
         ANONYMOUS,
         ED25519,
-        SECP256K1;
+        SECP256K1
     }
 
     class Identity {
