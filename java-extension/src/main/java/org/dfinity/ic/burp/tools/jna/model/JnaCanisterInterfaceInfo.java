@@ -1,7 +1,7 @@
-package org.dfinity.ic.burp.tools.jna;
+package org.dfinity.ic.burp.tools.jna.model;
 
 import com.sun.jna.Structure;
-import org.dfinity.ic.burp.tools.IcTools;
+import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
 
 import java.util.Optional;
 
@@ -16,7 +16,7 @@ public class JnaCanisterInterfaceInfo extends Structure {
         this.canister_method = canister_method;
     }
 
-    public static JnaCanisterInterfaceInfo from(Optional<IcTools.CanisterInterfaceInfo> canisterInterfaceInfo) {
+    public static JnaCanisterInterfaceInfo from(Optional<CanisterInterfaceInfo> canisterInterfaceInfo) {
         return canisterInterfaceInfo.map(inf -> new JnaCanisterInterfaceInfo(inf.canisterInterface, inf.canisterMethod)).orElseGet(JnaCanisterInterfaceInfo::unknown);
     }
 
