@@ -4,16 +4,19 @@ import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.http.message.requests.MalformedRequestException;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import burp.api.montoya.ui.Selection;
 import burp.api.montoya.ui.editor.EditorOptions;
 import burp.api.montoya.ui.editor.RawEditor;
-import burp.api.montoya.ui.editor.extension.*;
+import burp.api.montoya.ui.editor.extension.ExtensionProvidedHttpRequestEditor;
+import burp.api.montoya.ui.editor.extension.ExtensionProvidedHttpResponseEditor;
 import org.dfinity.ic.burp.tools.IcTools;
-import org.dfinity.ic.burp.tools.IcTools.IcToolsException;
+import org.dfinity.ic.burp.tools.model.IcToolsException;
 
-import java.awt.*;
+import java.awt.Component;
 import java.util.Optional;
+import java.util.function.Function;
 
 public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequestEditor, ExtensionProvidedHttpResponseEditor {
 
@@ -22,11 +25,13 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
     private final IcTools icTools;
     private final RawEditor requestEditor;
     private final boolean isRequest;
+    private final Function<String, ByteArray> byteArrayFactory;
     private HttpRequestResponse requestResponse;
 
-    public IcHttpRequestResponseViewer(MontoyaApi api, IcTools icTools, boolean isRequest) {
+    public IcHttpRequestResponseViewer(MontoyaApi api, IcTools icTools, boolean isRequest, Optional<Function<String, ByteArray>> byteArrayFactory) {
         this.icTools = icTools;
         this.isRequest = isRequest;
+        this.byteArrayFactory = byteArrayFactory.orElse(ByteArray::byteArray);
         requestEditor = api.userInterface().createRawEditor(EditorOptions.READ_ONLY);
     }
 
@@ -44,7 +49,7 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
     public void setRequestResponse(HttpRequestResponse requestResponse) {
         this.requestResponse = requestResponse;
         String content;
-        if(isRequest) {
+        if (isRequest) {
             try {
                 var res = icTools.decodeCanisterRequest(requestResponse.request().body().getBytes(), Optional.empty());
                 content = res.decodedRequest;
@@ -58,15 +63,19 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
                 content = String.format("Failed to decode response: %s", e.getStackTraceAsString());
             }
         }
-        this.requestEditor.setContents(ByteArray.byteArray(content));
+        this.requestEditor.setContents(byteArrayFactory.apply(content));
     }
 
     @Override
     public boolean isEnabledFor(HttpRequestResponse requestResponse) {
-        var request_path = requestResponse.request().path();
-        var content_type = isRequest ? requestResponse.request().header("Content-Type") : requestResponse.response().header("Content-Type");
-        var content_length = isRequest ? requestResponse.request().header("Content-Length") : requestResponse.response().header("Content-Length");
-        return content_type != null && content_type.value().equals("application/cbor") && content_length != null && !content_length.value().equals("0") && request_path.matches(IC_API_PATH_REGEX);
+        try {
+            var request_path = requestResponse.request().path();
+            var content_type = isRequest ? requestResponse.request().header("Content-Type") : requestResponse.response().header("Content-Type");
+            var content_length = isRequest ? requestResponse.request().header("Content-Length") : requestResponse.response().header("Content-Length");
+            return content_type != null && content_type.value().equals("application/cbor") && content_length != null && !content_length.value().equals("0") && request_path.matches(IC_API_PATH_REGEX);
+        } catch (MalformedRequestException e) {
+            return false;
+        }
     }
 
     @Override
