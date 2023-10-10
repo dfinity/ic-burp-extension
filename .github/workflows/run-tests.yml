@@ -33,5 +33,5 @@ jobs:
       run: ./gradlew clean build
     - name: Build & test Rust
       working-directory: ./rust-lib
-      run: cargo build && cargo test
+      run: cargo clean && cargo build && cargo test
       
