@@ -4,6 +4,7 @@ import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.http.message.requests.MalformedRequestException;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import burp.api.montoya.ui.Selection;
 import burp.api.montoya.ui.editor.EditorOptions;
@@ -63,10 +64,14 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
 
     @Override
     public boolean isEnabledFor(HttpRequestResponse requestResponse) {
-        var request_path = requestResponse.request().path();
-        var content_type = isRequest ? requestResponse.request().header("Content-Type") : requestResponse.response().header("Content-Type");
-        var content_length = isRequest ? requestResponse.request().header("Content-Length") : requestResponse.response().header("Content-Length");
-        return content_type != null && content_type.value().equals("application/cbor") && content_length != null && !content_length.value().equals("0") && request_path.matches(IC_API_PATH_REGEX);
+        try {
+            var request_path = requestResponse.request().path();
+            var content_type = isRequest ? requestResponse.request().header("Content-Type") : requestResponse.response().header("Content-Type");
+            var content_length = isRequest ? requestResponse.request().header("Content-Length") : requestResponse.response().header("Content-Length");
+            return content_type != null && content_type.value().equals("application/cbor") && content_length != null && !content_length.value().equals("0") && request_path.matches(IC_API_PATH_REGEX);
+        } catch (MalformedRequestException e) {
+            return false;
+        }
     }
 
     @Override
