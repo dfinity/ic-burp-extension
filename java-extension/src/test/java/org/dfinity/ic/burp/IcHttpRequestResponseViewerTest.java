@@ -183,7 +183,7 @@ class IcHttpRequestResponseViewerTest {
 
         ArgumentCaptor<ByteArray> captor = ArgumentCaptor.forClass(ByteArray.class);
         verify(rawEditor).setContents(captor.capture());
-        assertEquals("decodedBodys", captor.getValue().toString());
+        assertEquals("decodedBody", captor.getValue().toString());
     }
 
     @ParameterizedTest
