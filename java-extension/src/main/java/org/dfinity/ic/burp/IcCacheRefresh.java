@@ -22,7 +22,7 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 
 public class IcCacheRefresh implements HttpHandler {
-    private static final Pattern IC_API_PATH_REGEX = Pattern.compile("/api/v2/canister/(?<cid>[^/]+)/(?<rtype>query|call|read_state)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern IC_API_PATH_REGEX = Pattern.compile("/api/v2/canister/(?<cid>[^/]+)/(?<rtype>query|call|read_state)");
     private final Logging log;
     private final IcTools icTools;
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
