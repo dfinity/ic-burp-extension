@@ -1,20 +1,22 @@
+use std::{fmt, mem};
 use std::borrow::Cow;
 use std::ffi::CString;
-use cbor::Decoder;
-use rustc_serialize::json::ToJson;
 use std::os::raw::c_char;
-use std::{fmt, mem};
+
 use candid::{IDLArgs, pretty_parse, Principal};
 use candid::utils::CandidSource;
+use cbor::Decoder;
 use hex;
 use ic_agent::to_request_id;
 use ic_certification::Certificate;
-use ic_certification::hash_tree::{HashTree, HashTreeNode};
+use ic_certification::hash_tree::HashTreeNode;
+use rustc_serialize::json::ToJson;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_cbor;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use thiserror::Error;
 
+pub mod canister_lookup;
 pub mod encode;
 mod jna;
 
@@ -28,9 +30,6 @@ pub extern fn cbor_decode(buf: *mut u8, size: usize) -> *mut c_char {
     mem::forget(data);
     unsafe { CString::from_vec_unchecked(cbor.to_json().to_string().into_bytes()) }.into_raw()
 }
-
-
-
 
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -104,6 +103,7 @@ pub struct SignedDelegation {
     #[serde(with = "serde_bytes")]
     pub signature: Vec<u8>,
 }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Delegation {
     /// The delegated-to key.
@@ -155,7 +155,7 @@ impl Into<EnvelopePretty<'_>> for Envelope<'_> {
             content: Cow::Owned(self.content.into_owned().into()),
             sender_pubkey: self.sender_pubkey,
             sender_sig: self.sender_sig,
-            sender_delegation: self.sender_delegation
+            sender_delegation: self.sender_delegation,
         }
     }
 }
@@ -255,7 +255,7 @@ pub struct NodeSignature {
 impl Into<QueryResponsePretty> for QueryResponse {
     fn into(self) -> QueryResponsePretty {
         match self {
-            QueryResponse::Replied { signatures, .. } => { QueryResponsePretty::Replied { reply: CallReplyPretty { arg: "ARG_PLACEHOLDER".parse().unwrap() }, signatures}}
+            QueryResponse::Replied { signatures, .. } => { QueryResponsePretty::Replied { reply: CallReplyPretty { arg: "ARG_PLACEHOLDER".parse().unwrap() }, signatures } }
             QueryResponse::Rejected(x) => { QueryResponsePretty::Rejected(x) }
         }
     }
@@ -264,7 +264,7 @@ impl Into<QueryResponsePretty> for QueryResponse {
 impl Into<QueryResponse> for QueryResponsePretty {
     fn into(self) -> QueryResponse {
         match self {
-            QueryResponsePretty::Replied { signatures, .. } => { QueryResponse::Replied { reply: CallReply { arg: vec![] }, signatures}}
+            QueryResponsePretty::Replied { signatures, .. } => { QueryResponse::Replied { reply: CallReply { arg: vec![] }, signatures } }
             QueryResponsePretty::Rejected(x) => { QueryResponse::Rejected(x) }
         }
     }
@@ -280,7 +280,7 @@ pub struct RejectResponse {
     /// The optional [error code](https://internetcomputer.org/docs/current/references/ic-interface-spec#error-codes) returned by the replica.
     #[serde(default)]
     pub error_code: Option<String>,
-    pub signatures: Vec<NodeSignature>
+    pub signatures: Vec<NodeSignature>,
 }
 
 /// See the [interface spec](https://internetcomputer.org/docs/current/references/ic-interface-spec#reject-codes).
@@ -391,10 +391,11 @@ impl Serialize for PathLabel {
             self.write_hex(&mut s).unwrap();
             s.serialize(serializer)
         } else {*/
-            serializer.serialize_bytes(self.0.as_ref())
+        serializer.serialize_bytes(self.0.as_ref())
         //}
     }
 }
+
 impl<'de> Deserialize<'de> for PathLabel
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -435,7 +436,7 @@ impl Into<EnvelopeContentPretty> for EnvelopeContent {
                     method_name,
                     arg: "ARG_PLACEHOLDER".parse().unwrap(),
                 }
-            },
+            }
             EnvelopeContent::Query { ingress_expiry, sender, canister_id, method_name, arg } => {
                 EnvelopeContentPretty::Query {
                     ingress_expiry: ingress_expiry,
@@ -444,7 +445,7 @@ impl Into<EnvelopeContentPretty> for EnvelopeContent {
                     method_name: method_name,
                     arg: "ARG_PLACEHOLDER".parse().unwrap(),
                 }
-            },
+            }
             EnvelopeContent::ReadState { ingress_expiry, sender, paths } => {
                 EnvelopeContentPretty::ReadState {
                     ingress_expiry,
@@ -468,7 +469,7 @@ impl Into<EnvelopeContent> for EnvelopeContentPretty {
                     method_name,
                     arg: vec![],
                 }
-            },
+            }
             EnvelopeContentPretty::Query { ingress_expiry, sender, canister_id, method_name, arg } => {
                 EnvelopeContent::Query {
                     ingress_expiry: ingress_expiry,
@@ -477,7 +478,7 @@ impl Into<EnvelopeContent> for EnvelopeContentPretty {
                     method_name: method_name,
                     arg: vec![],
                 }
-            },
+            }
             EnvelopeContentPretty::ReadState { ingress_expiry, sender, paths } => {
                 EnvelopeContent::ReadState {
                     ingress_expiry,
@@ -504,15 +505,15 @@ struct IdlConfig {
 
 fn vec_to_idl_arg_factory(arg: Vec<u8>, idl: &Option<IdlConfig>) -> IDLArgs {
     match idl {
-        None => {IDLArgs::from_bytes(&arg).unwrap()}
+        None => { IDLArgs::from_bytes(&arg).unwrap() }
         Some(config) => {
             let idl = CandidSource::Text(&*config.idl);
             let (type_env, actor) = idl.load().unwrap();
             let actor = actor.unwrap();
             let func = type_env.get_method(&actor, &*config.method).unwrap();
             let types = match config.direction {
-                MessageType::REQUEST => {(&func.args).clone()}
-                MessageType::RESPONSE => {(&func.rets).clone()}
+                MessageType::REQUEST => { (&func.args).clone() }
+                MessageType::RESPONSE => { (&func.rets).clone() }
             };
             IDLArgs::from_bytes_with_types(&arg, &type_env, &types).unwrap()
         }
@@ -521,15 +522,15 @@ fn vec_to_idl_arg_factory(arg: Vec<u8>, idl: &Option<IdlConfig>) -> IDLArgs {
 
 fn idl_arg_to_vec_factory(arg: IDLArgs, idl: &Option<IdlConfig>) -> Vec<u8> {
     match idl {
-        None => {arg.to_bytes().unwrap()}
+        None => { arg.to_bytes().unwrap() }
         Some(config) => {
             let idl = CandidSource::Text(&*config.idl);
             let (type_env, actor) = idl.load().unwrap();
             let actor = actor.unwrap();
             let func = type_env.get_method(&actor, &*config.method).unwrap();
             let types = match config.direction {
-                MessageType::REQUEST => {(&func.args).clone()}
-                MessageType::RESPONSE => {(&func.rets).clone()}
+                MessageType::REQUEST => { (&func.args).clone() }
+                MessageType::RESPONSE => { (&func.rets).clone() }
             };
             arg.to_bytes_with_types(&type_env, &types).unwrap()
         }
@@ -577,14 +578,14 @@ fn print_cbor_decode_readstate_response(cbor: String, idl: Option<IdlConfig>) {
 
 fn print_cbor_decode_encode_query_response(cbor: String, idl: Option<IdlConfig>) {
     let res = hex::decode(cbor).unwrap();
-    let query_response : QueryResponse = serde_cbor::from_slice(&res).unwrap();
+    let query_response: QueryResponse = serde_cbor::from_slice(&res).unwrap();
     let pretty: QueryResponsePretty = query_response.clone().into();
     let query_json = serde_json::to_string_pretty(&pretty).unwrap();
 
     let mut has_candid;
     let mut candid_pretty = String::from("");
     let query_json = match query_response.clone() {
-        QueryResponse::Replied {reply: x, ..} => {
+        QueryResponse::Replied { reply: x, .. } => {
             has_candid = true;
             candid_pretty = vec_to_idl_arg_factory(x.arg, &idl).to_string();
             query_json.replace("ARG_PLACEHOLDER", &*candid_pretty)
@@ -600,19 +601,19 @@ fn print_cbor_decode_encode_query_response(cbor: String, idl: Option<IdlConfig>)
     let response: QueryResponse = if has_candid {
         let a = query_json.find("\"(");
         let b = query_json.find(")\"");
-        let c = &query_json[a.unwrap()+1..b.unwrap()+1];
+        let c = &query_json[a.unwrap() + 1..b.unwrap() + 1];
         let arg2 = idl_arg_to_vec_factory(pretty_parse::<IDLArgs>("candid arguments", &c).unwrap(), &idl);
         let candid_pretty2 = vec_to_idl_arg_factory(arg2.clone(), &idl).to_string();
         //println!("{}", hex::encode(arg2.clone()));
         assert_eq!(candid_pretty, candid_pretty2);
 
         let mut query_json2 = query_json.clone();
-        query_json2.replace_range(a.unwrap()+1..b.unwrap()+1, &"ARG_PLACEHOLDER");
+        query_json2.replace_range(a.unwrap() + 1..b.unwrap() + 1, &"ARG_PLACEHOLDER");
         let pretty2: QueryResponsePretty = serde_json::from_str(&query_json2).unwrap();
 
         match pretty2.into() {
             QueryResponse::Replied { signatures, .. } => {
-                QueryResponse::Replied { reply: CallReply {arg: arg2}, signatures}
+                QueryResponse::Replied { reply: CallReply { arg: arg2 }, signatures }
             }
             _ => unreachable!("not reachable")
         }
@@ -631,14 +632,14 @@ fn print_cbor_decode_encode_query_response(cbor: String, idl: Option<IdlConfig>)
 fn print_cbor_decode_encode(cbor: String, idl: Option<IdlConfig>) {
     // decode
     let res = hex::decode(cbor).unwrap();
-    let env : Envelope = serde_cbor::from_slice(&res).unwrap();
+    let env: Envelope = serde_cbor::from_slice(&res).unwrap();
     let pretty: EnvelopePretty = env.clone().into();
     let env_json = serde_json::to_string_pretty(&pretty).unwrap();
 
     let mut has_candid;
     let mut candid_pretty = String::from("");
     let env_json = match env.content.clone().into_owned().into() {
-        EnvelopeContent::Call { arg, .. } | EnvelopeContent::Query {arg, ..} => {
+        EnvelopeContent::Call { arg, .. } | EnvelopeContent::Query { arg, .. } => {
             has_candid = true;
             candid_pretty = vec_to_idl_arg_factory(arg, &idl).to_string();
             env_json.replace("ARG_PLACEHOLDER", &*candid_pretty)
@@ -654,14 +655,14 @@ fn print_cbor_decode_encode(cbor: String, idl: Option<IdlConfig>) {
     let env_enc = if has_candid {
         let a = env_json.find("\"(");
         let b = env_json.find(")\"");
-        let c = &env_json[a.unwrap()+1..b.unwrap()+1];
+        let c = &env_json[a.unwrap() + 1..b.unwrap() + 1];
         let arg2 = idl_arg_to_vec_factory(pretty_parse::<IDLArgs>("candid arguments", &c).unwrap(), &idl);
         let candid_pretty2 = vec_to_idl_arg_factory(arg2.clone(), &idl).to_string();
         //println!("{}", hex::encode(arg2.clone()));
         assert_eq!(candid_pretty, candid_pretty2);
 
         let mut env_json2 = env_json.clone();
-        env_json2.replace_range(a.unwrap()+1..b.unwrap()+1, &"ARG_PLACEHOLDER");
+        env_json2.replace_range(a.unwrap() + 1..b.unwrap() + 1, &"ARG_PLACEHOLDER");
         let pretty2: EnvelopePretty = serde_json::from_str(&env_json2).unwrap();
 
         let mut env2: Envelope = pretty2.into();
@@ -672,17 +673,17 @@ fn print_cbor_decode_encode(cbor: String, idl: Option<IdlConfig>) {
                     sender,
                     canister_id,
                     method_name,
-                    arg:arg2
+                    arg: arg2,
                 }
             }
-            EnvelopeContent::Call { nonce, ingress_expiry, sender, canister_id, method_name, arg} => {
+            EnvelopeContent::Call { nonce, ingress_expiry, sender, canister_id, method_name, arg } => {
                 EnvelopeContent::Call {
                     nonce,
                     ingress_expiry,
                     sender,
                     canister_id,
                     method_name,
-                    arg:arg2
+                    arg: arg2,
                 }
             }
             x => x
@@ -704,8 +705,6 @@ fn print_cbor_decode_encode(cbor: String, idl: Option<IdlConfig>) {
 
 #[cfg(test)]
 mod tests {
-    use serde::{Deserialize, Serialize};
-    use crate::{encode, Envelope, IdlConfig, MessageType, print_cbor_decode_encode, print_cbor_decode_encode_query_response, print_cbor_decode_readstate_response};
     //use crate::encode::{decode_canister_request, RequestInfo};
 
 
@@ -1260,66 +1259,66 @@ service : (opt InternetIdentityInit) -> {
     authn_method_remove: (IdentityNumber, PublicKey) -> (opt AuthnMethodRemoveResponse);
 }
     ";
-/* disabled for now, have to clean up this file!
-    #[test]
-    fn cbor_decode_encode() {
-        let res = hex::decode("D9D9F7A167636F6E74656E74A66361726759016B4449444C056D7B6C02007101716D016E7A6C05EFD6E40271E1EDEB4A71A2F5ED880400C6A4A1980602B0F1B99806030104282F5F6170702F696D6D757461626C652F6173736574732F4C6F676F2E66343530363237352E63737303474554000704486F73740B6E6E732E6963302E6170700661636365707412746578742F6373732C2A2F2A3B713D302E31097365632D63682D756100107365632D63682D75612D6D6F62696C65023F30127365632D63682D75612D706C6174666F726D0222220A757365722D6167656E74744D6F7A696C6C612F352E30202857696E646F7773204E542031302E303B2057696E36343B2078363429204170706C655765624B69742F3533372E333620284B48544D4C2C206C696B65204765636B6F29204368726F6D652F3131362E302E353834352E313431205361666172692F3533372E33360F4163636570742D456E636F64696E6717677A69702C206465666C6174652C206964656E746974790102006B63616E69737465725F69644A000000000000000801016E696E67726573735F6578706972791B17823E88F636F9006B6D6574686F645F6E616D656C687474705F726571756573746C726571756573745F747970656571756572796673656E6465724104").unwrap();
-        let env : Envelope = serde_cbor::from_slice(&res).unwrap();
-        let mut serialized_bytes = Vec::new();
-        let mut serializer = serde_cbor::Serializer::new(&mut serialized_bytes);
-        serializer.self_describe().unwrap();
-        env.serialize(&mut serializer).unwrap();
-        let env2: Envelope = serde_cbor::from_slice(&serialized_bytes).unwrap();
-        println!("{:?}", env);
-        println!("{:?}", env2);
-    }
-
-    #[test]
-    fn request_decode_encode() {
-        let QUERY_REQUEST_IDL: IdlConfig = IdlConfig {
-            idl: String::from(SW_IDL),
-            direction: MessageType::REQUEST,
-            method: "http_request".to_string(),
-        };
-        let CALL_REQUEST_IDL: IdlConfig = IdlConfig {
-            idl: String::from(ICRC1_IDL),
-            direction: MessageType::REQUEST,
-            method: "icrc1_balance_of".to_string(),
-        };
-
-        print_cbor_decode_encode(String::from(QUERY_REQUEST), Some(QUERY_REQUEST_IDL));
-    }
-
-    #[test]
-    fn query_response_decode_encode() {
-        let QUERY_REQUEST_IDL: IdlConfig = IdlConfig {
-            idl: String::from(SW_IDL),
-            direction: MessageType::RESPONSE,
-            method: "http_request".to_string(),
-        };
-        print_cbor_decode_encode_query_response(String::from(QUERY_RESPONSE_REJECTED), None);
-    }
-
-    #[test]
-    fn readstate_response_decode_encode() {
-        let PREP_DELEGATION_IDL: IdlConfig = IdlConfig {
-            idl: String::from(II_IDL),
-            direction: MessageType::RESPONSE,
-            method: "create_challenge".to_string()
-        };
-        print_cbor_decode_readstate_response(String::from(READ_STATE_RESPONSE_REPLIED), Some(PREP_DELEGATION_IDL));
-    }
-    #[test]
-    fn decode_canister_request_test() {
-        let cbor = hex::decode(QUERY_REQUEST).unwrap();
-        let res = decode_canister_request(cbor, Some(String::from(SW_IDL))).unwrap();
-        match res {
-            RequestInfo::Call { .. } => { unreachable!("submitted query") }
-            RequestInfo::ReadState { .. } => { unreachable!("submitted query") }
-            RequestInfo::Query { decoded_request, .. } => {
-                println!("{}", decoded_request);
-            }
+    /* disabled for now, have to clean up this file!
+        #[test]
+        fn cbor_decode_encode() {
+            let res = hex::decode("D9D9F7A167636F6E74656E74A66361726759016B4449444C056D7B6C02007101716D016E7A6C05EFD6E40271E1EDEB4A71A2F5ED880400C6A4A1980602B0F1B99806030104282F5F6170702F696D6D757461626C652F6173736574732F4C6F676F2E66343530363237352E63737303474554000704486F73740B6E6E732E6963302E6170700661636365707412746578742F6373732C2A2F2A3B713D302E31097365632D63682D756100107365632D63682D75612D6D6F62696C65023F30127365632D63682D75612D706C6174666F726D0222220A757365722D6167656E74744D6F7A696C6C612F352E30202857696E646F7773204E542031302E303B2057696E36343B2078363429204170706C655765624B69742F3533372E333620284B48544D4C2C206C696B65204765636B6F29204368726F6D652F3131362E302E353834352E313431205361666172692F3533372E33360F4163636570742D456E636F64696E6717677A69702C206465666C6174652C206964656E746974790102006B63616E69737465725F69644A000000000000000801016E696E67726573735F6578706972791B17823E88F636F9006B6D6574686F645F6E616D656C687474705F726571756573746C726571756573745F747970656571756572796673656E6465724104").unwrap();
+            let env : Envelope = serde_cbor::from_slice(&res).unwrap();
+            let mut serialized_bytes = Vec::new();
+            let mut serializer = serde_cbor::Serializer::new(&mut serialized_bytes);
+            serializer.self_describe().unwrap();
+            env.serialize(&mut serializer).unwrap();
+            let env2: Envelope = serde_cbor::from_slice(&serialized_bytes).unwrap();
+            println!("{:?}", env);
+            println!("{:?}", env2);
         }
 
-    }*/
+        #[test]
+        fn request_decode_encode() {
+            let QUERY_REQUEST_IDL: IdlConfig = IdlConfig {
+                idl: String::from(SW_IDL),
+                direction: MessageType::REQUEST,
+                method: "http_request".to_string(),
+            };
+            let CALL_REQUEST_IDL: IdlConfig = IdlConfig {
+                idl: String::from(ICRC1_IDL),
+                direction: MessageType::REQUEST,
+                method: "icrc1_balance_of".to_string(),
+            };
+
+            print_cbor_decode_encode(String::from(QUERY_REQUEST), Some(QUERY_REQUEST_IDL));
+        }
+
+        #[test]
+        fn query_response_decode_encode() {
+            let QUERY_REQUEST_IDL: IdlConfig = IdlConfig {
+                idl: String::from(SW_IDL),
+                direction: MessageType::RESPONSE,
+                method: "http_request".to_string(),
+            };
+            print_cbor_decode_encode_query_response(String::from(QUERY_RESPONSE_REJECTED), None);
+        }
+
+        #[test]
+        fn readstate_response_decode_encode() {
+            let PREP_DELEGATION_IDL: IdlConfig = IdlConfig {
+                idl: String::from(II_IDL),
+                direction: MessageType::RESPONSE,
+                method: "create_challenge".to_string()
+            };
+            print_cbor_decode_readstate_response(String::from(READ_STATE_RESPONSE_REPLIED), Some(PREP_DELEGATION_IDL));
+        }
+        #[test]
+        fn decode_canister_request_test() {
+            let cbor = hex::decode(QUERY_REQUEST).unwrap();
+            let res = decode_canister_request(cbor, Some(String::from(SW_IDL))).unwrap();
+            match res {
+                RequestInfo::Call { .. } => { unreachable!("submitted query") }
+                RequestInfo::ReadState { .. } => { unreachable!("submitted query") }
+                RequestInfo::Query { decoded_request, .. } => {
+                    println!("{}", decoded_request);
+                }
+            }
+
+        }*/
 }

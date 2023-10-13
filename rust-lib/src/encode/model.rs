@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::fmt;
+
 use candid::Principal;
 use ic_certification::Certificate;
 use ic_transport_types::{ReadStateResponse, RejectResponse, SignedDelegation};
@@ -92,7 +93,7 @@ impl Into<EnvelopePretty<'_>> for Envelope<'_> {
             content: Cow::Owned(self.content.into_owned().into()),
             sender_pubkey: self.sender_pubkey,
             sender_sig: self.sender_sig,
-            sender_delegation: self.sender_delegation
+            sender_delegation: self.sender_delegation,
         }
     }
 }
@@ -163,7 +164,7 @@ impl Into<EnvelopeContentPretty> for EnvelopeContent {
                     method_name,
                     arg: "ARG_PLACEHOLDER".parse().unwrap(),
                 }
-            },
+            }
             EnvelopeContent::Query { ingress_expiry, sender, canister_id, method_name, .. } => {
                 EnvelopeContentPretty::Query {
                     ingress_expiry: ingress_expiry,
@@ -172,7 +173,7 @@ impl Into<EnvelopeContentPretty> for EnvelopeContent {
                     method_name: method_name,
                     arg: "ARG_PLACEHOLDER".parse().unwrap(),
                 }
-            },
+            }
             EnvelopeContent::ReadState { ingress_expiry, sender, paths } => {
                 EnvelopeContentPretty::ReadState {
                     ingress_expiry,
@@ -196,7 +197,7 @@ impl Into<EnvelopeContent> for EnvelopeContentPretty {
                     method_name,
                     arg: vec![],
                 }
-            },
+            }
             EnvelopeContentPretty::Query { ingress_expiry, sender, canister_id, method_name, .. } => {
                 EnvelopeContent::Query {
                     ingress_expiry: ingress_expiry,
@@ -205,7 +206,7 @@ impl Into<EnvelopeContent> for EnvelopeContentPretty {
                     method_name: method_name,
                     arg: vec![],
                 }
-            },
+            }
             EnvelopeContentPretty::ReadState { ingress_expiry, sender, paths } => {
                 EnvelopeContent::ReadState {
                     ingress_expiry,
@@ -253,6 +254,7 @@ impl Serialize for PathLabel {
         //}
     }
 }
+
 impl<'de> Deserialize<'de> for PathLabel
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -279,6 +281,21 @@ impl<'de> Deserialize<'de> for PathLabel
         }
         Ok(PathLabel(dst))*/
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum RequestMetadata {
+    Call {
+        request_id: Vec<u8>,
+        canister_method: String,
+    },
+    ReadState {
+        request_id: Vec<u8>,
+    },
+    Query {
+        request_id: Vec<u8>,
+        canister_method: String,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -346,7 +363,7 @@ pub struct NodeSignature {
 impl Into<QueryResponsePretty> for QueryResponse {
     fn into(self) -> QueryResponsePretty {
         match self {
-            QueryResponse::Replied { signatures, .. } => { QueryResponsePretty::Replied { reply: CallReplyPretty { arg: "ARG_PLACEHOLDER".parse().unwrap() }, signatures}}
+            QueryResponse::Replied { signatures, .. } => { QueryResponsePretty::Replied { reply: CallReplyPretty { arg: "ARG_PLACEHOLDER".parse().unwrap() }, signatures } }
             QueryResponse::Rejected(x) => { QueryResponsePretty::Rejected(x) }
         }
     }
@@ -355,7 +372,7 @@ impl Into<QueryResponsePretty> for QueryResponse {
 impl Into<QueryResponse> for QueryResponsePretty {
     fn into(self) -> QueryResponse {
         match self {
-            QueryResponsePretty::Replied { signatures, .. } => { QueryResponse::Replied { reply: CallReply { arg: vec![] }, signatures}}
+            QueryResponsePretty::Replied { signatures, .. } => { QueryResponse::Replied { reply: CallReply { arg: vec![] }, signatures } }
             QueryResponsePretty::Rejected(x) => { QueryResponse::Rejected(x) }
         }
     }

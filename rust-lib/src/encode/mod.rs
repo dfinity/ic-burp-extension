@@ -1,16 +1,17 @@
-pub mod model;
-
 use candid::IDLArgs;
 use candid::utils::CandidSource;
 use ic_certification::hash_tree::HashTreeNode;
 use ic_transport_types::{ReadStateResponse, RequestIdError, to_request_id};
 use thiserror::Error;
+
 use crate::encode::EncodingError::{CandidConversionFailed, UnexpectedNumberOfRequestIdsFound};
 use crate::encode::MessageType::{REQUEST, RESPONSE};
-use crate::encode::model::{CanisterInterfaceInfo, Envelope, EnvelopeContent, EnvelopePretty, QueryResponse, QueryResponsePretty, ReadStateResponsePretty, RequestInfo};
+use crate::encode::model::{CanisterInterfaceInfo, Envelope, EnvelopeContent, EnvelopePretty, QueryResponse, QueryResponsePretty, ReadStateResponsePretty, RequestInfo, RequestMetadata};
 
+pub mod model;
 
 pub type EncodingResult<T> = Result<T, EncodingError>;
+
 
 #[derive(Error, Debug)]
 pub enum EncodingError {
@@ -34,7 +35,7 @@ fn get_request_id(content: &EnvelopeContent) -> EncodingResult<Vec<u8>> {
             for path in paths {
                 if path.len() > 1 && path[0].as_bytes().eq("request_status".as_bytes()) {
                     if rid_label.len() > 1 {
-                        return Err(UnexpectedNumberOfRequestIdsFound(2))
+                        return Err(UnexpectedNumberOfRequestIdsFound(2));
                     }
                     rid_label.push(path[1].clone())
                 }
@@ -47,7 +48,6 @@ fn get_request_id(content: &EnvelopeContent) -> EncodingResult<Vec<u8>> {
         }
     }
 }
-
 
 
 #[derive(Clone)]
@@ -72,6 +72,7 @@ impl IdlConfig {
         }
     }
 }
+
 impl From<CanisterInterfaceInfo> for IdlConfig {
     fn from(value: CanisterInterfaceInfo) -> Self {
         IdlConfig {
@@ -84,25 +85,45 @@ impl From<CanisterInterfaceInfo> for IdlConfig {
 
 fn vec_to_idl_arg_factory(arg: Vec<u8>, idl: &Option<IdlConfig>) -> EncodingResult<IDLArgs> {
     match idl {
-        None => {Ok(IDLArgs::from_bytes(&arg)?)}
+        None => { Ok(IDLArgs::from_bytes(&arg)?) }
         Some(config) => {
             let idl = CandidSource::Text(&*config.api);
             let (type_env, actor) = idl.load()?;
             let actor = actor.ok_or(CandidConversionFailed(candid::Error::msg("no actor found")))?;
             let func = type_env.get_method(&actor, &*config.method)?;
             let types = match config.direction {
-                REQUEST => {(&func.args).clone()}
-                RESPONSE => {(&func.rets).clone()}
+                REQUEST => { (&func.args).clone() }
+                RESPONSE => { (&func.rets).clone() }
             };
             Ok(IDLArgs::from_bytes_with_types(&arg, &type_env, &types)?)
         }
     }
 }
 
-
+pub fn get_request_metadata(encoded_cbor_request: Vec<u8>) -> EncodingResult<RequestMetadata> {
+    let env: Envelope = serde_cbor::from_slice(&encoded_cbor_request)?;
+    let request_id = get_request_id(&env.content)?;
+    match env.content.clone().into_owned().into() {
+        EnvelopeContent::Call { method_name, .. } => {
+            Ok(RequestMetadata::Call {
+                request_id,
+                canister_method: method_name,
+            })
+        }
+        EnvelopeContent::ReadState { .. } => {
+            Ok(RequestMetadata::ReadState { request_id })
+        }
+        EnvelopeContent::Query { method_name, .. } => {
+            Ok(RequestMetadata::Query {
+                request_id,
+                canister_method: method_name,
+            })
+        }
+    }
+}
 
 pub fn decode_canister_request(encoded_cbor_request: Vec<u8>, canister_interface: Option<String>) -> EncodingResult<RequestInfo> {
-    let env : Envelope = serde_cbor::from_slice(&encoded_cbor_request)?;
+    let env: Envelope = serde_cbor::from_slice(&encoded_cbor_request)?;
     let request_id = get_request_id(&env.content)?;
     let pretty: EnvelopePretty = env.clone().into();
     let env_json = serde_json::to_string_pretty(&pretty)?;
@@ -127,7 +148,7 @@ pub fn decode_canister_request(encoded_cbor_request: Vec<u8>, canister_interface
                 canister_method: method_name,
             })
         }
-        EnvelopeContent::Query {arg, method_name, ..} => {
+        EnvelopeContent::Query { arg, method_name, .. } => {
             let idl_config = match canister_interface {
                 None => None,
                 Some(api) => {
@@ -149,7 +170,7 @@ pub fn decode_canister_request(encoded_cbor_request: Vec<u8>, canister_interface
         EnvelopeContent::ReadState { .. } => {
             Ok(RequestInfo::ReadState {
                 request_id,
-                decoded_request: env_json
+                decoded_request: env_json,
             })
         }
     }
@@ -175,7 +196,7 @@ fn decode_query_response(query_response: QueryResponse, idl_config: Option<IdlCo
     let query_json = serde_json::to_string_pretty(&pretty).unwrap();
 
     match query_response.clone() {
-        QueryResponse::Replied {reply: x, ..} => {
+        QueryResponse::Replied { reply: x, .. } => {
             let candid_pretty = vec_to_idl_arg_factory(x.arg, &idl_config)?.to_string();
             Ok(query_json.replace("ARG_PLACEHOLDER", &*candid_pretty))
         }
@@ -225,9 +246,11 @@ fn find_candid_in_tree(root: HashTreeNode<Vec<u8>>) -> Vec<Vec<u8>> {
 mod tests {
     use std::fs;
     use std::path::PathBuf;
-    use crate::encode::{decode_canister_request, decode_canister_response};
-    use crate::encode::model::{CanisterInterfaceInfo, RequestInfo};
-    //use crate::encode::{decode_canister_request, RequestInfo};
+
+    use crate::encode::{decode_canister_request, decode_canister_response, get_request_metadata};
+    use crate::encode::model::{CanisterInterfaceInfo, RequestInfo, RequestMetadata};
+
+//use crate::encode::{decode_canister_request, RequestInfo};
 
 
     static QUERY_REQUEST: &str = "D9D9F7A167636F6E74656E74A66361726759016B4449444C056D7B6C02007101716D016E7A6C05EFD6E40271E1EDEB4A71A2F5ED880400C6A4A1980602B0F1B99806030104282F5F6170702F696D6D757461626C652F6173736574732F4C6F676F2E66343530363237352E63737303474554000704486F73740B6E6E732E6963302E6170700661636365707412746578742F6373732C2A2F2A3B713D302E31097365632D63682D756100107365632D63682D75612D6D6F62696C65023F30127365632D63682D75612D706C6174666F726D0222220A757365722D6167656E74744D6F7A696C6C612F352E30202857696E646F7773204E542031302E303B2057696E36343B2078363429204170706C655765624B69742F3533372E333620284B48544D4C2C206C696B65204765636B6F29204368726F6D652F3131362E302E353834352E313431205361666172692F3533372E33360F4163636570742D456E636F64696E6717677A69702C206465666C6174652C206964656E746974790102006B63616E69737465725F69644A000000000000000801016E696E67726573735F6578706972791B17823E88F636F9006B6D6574686F645F6E616D656C687474705F726571756573746C726571756573745F747970656571756572796673656E6465724104";
@@ -272,6 +295,18 @@ mod tests {
         assert_eq!(res, RequestInfo::Query {
             request_id: vec![89, 198, 184, 38, 208, 5, 33, 182, 139, 139, 176, 175, 45, 169, 129, 20, 82, 236, 80, 144, 136, 70, 30, 132, 49, 73, 26, 97, 14, 215, 154, 3],
             decoded_request: "{\n  \"content\": {\n    \"request_type\": \"query\",\n    \"ingress_expiry\": 1693985167812000000,\n    \"sender\": \"2vxsx-fae\",\n    \"canister_id\": \"qoctq-giaaa-aaaaa-aaaea-cai\",\n    \"method_name\": \"http_request\",\n    \"arg\": \"(\n  record {\n    5_843_823 = \"/_app/immutable/assets/Logo.f4506275.css\";\n    156_956_385 = \"GET\";\n    1_092_319_906 = vec {};\n    1_661_489_734 = vec {\n      record { \"Host\"; \"nns.ic0.app\" };\n      record { \"accept\"; \"text/css,*/*;q=0.1\" };\n      record { \"sec-ch-ua\"; \"\" };\n      record { \"sec-ch-ua-mobile\"; \"?0\" };\n      record { \"sec-ch-ua-platform\"; \"\\\"\\\"\" };\n      record {\n        \"user-agent\";\n        \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.141 Safari/537.36\";\n      };\n      record { \"Accept-Encoding\"; \"gzip, deflate, identity\" };\n    };\n    1_661_892_784 = opt (2 : nat16);\n  },\n)\"\n  }\n}".to_string(),
+            canister_method: "http_request".to_string(),
+        });
+    }
+
+    #[test]
+    fn get_query_request_metadata() {
+        let request = hex::decode(QUERY_REQUEST).unwrap();
+
+        let res = get_request_metadata(request).unwrap();
+
+        assert_eq!(res, RequestMetadata::Query {
+            request_id: vec![89, 198, 184, 38, 208, 5, 33, 182, 139, 139, 176, 175, 45, 169, 129, 20, 82, 236, 80, 144, 136, 70, 30, 132, 49, 73, 26, 97, 14, 215, 154, 3],
             canister_method: "http_request".to_string(),
         });
     }
@@ -333,16 +368,39 @@ mod tests {
             canister_method: "icrc1_balance_of".to_string(),
         });
     }
-    
+
+    #[test]
+    fn get_call_request_metadata() {
+        let request = hex::decode(CALL_REQUEST).unwrap();
+
+        let res = get_request_metadata(request).unwrap();
+
+        assert_eq!(res, RequestMetadata::Call {
+            request_id: vec![21, 239, 149, 13, 127, 127, 243, 123, 190, 201, 36, 240, 105, 187, 132, 240, 147, 102, 188, 254, 27, 139, 120, 56, 102, 67, 57, 87, 213, 82, 24, 96],
+            canister_method: "icrc1_balance_of".to_string(),
+        });
+    }
+
     #[test]
     fn decode_readstate_request() {
         let request = hex::decode(READ_STATE_REQUEST).unwrap();
-        
+
         let res = decode_canister_request(request, None).unwrap();
-        
+
         assert_eq!(res, RequestInfo::ReadState {
             request_id: vec![161, 122, 85, 66, 232, 199, 243, 43, 170, 133, 2, 220, 174, 39, 219, 48, 95, 183, 254, 84, 255, 123, 191, 242, 252, 90, 167, 149, 216, 27, 219, 18],
-            decoded_request: "{\n  \"content\": {\n    \"request_type\": \"read_state\",\n    \"ingress_expiry\": 1695807388233000000,\n    \"sender\": \"beww7-mkqch-snxsk-fuyra-2qtgr-7k5sz-63msb-4i76g-zowbr-lpufz-oae\",\n    \"paths\": [\n      [\n        [\n          114,\n          101,\n          113,\n          117,\n          101,\n          115,\n          116,\n          95,\n          115,\n          116,\n          97,\n          116,\n          117,\n          115\n        ],\n        [\n          161,\n          122,\n          85,\n          66,\n          232,\n          199,\n          243,\n          43,\n          170,\n          133,\n          2,\n          220,\n          174,\n          39,\n          219,\n          48,\n          95,\n          183,\n          254,\n          84,\n          255,\n          123,\n          191,\n          242,\n          252,\n          90,\n          167,\n          149,\n          216,\n          27,\n          219,\n          18\n        ]\n      ]\n    ]\n  },\n  \"sender_pubkey\": [\n    48,\n    94,\n    48,\n    12,\n    6,\n    10,\n    43,\n    6,\n    1,\n    4,\n    1,\n    131,\n    184,\n    67,\n    1,\n    1,\n    3,\n    78,\n    0,\n    165,\n    1,\n    2,\n    3,\n    38,\n    32,\n    1,\n    33,\n    88,\n    32,\n    241,\n    19,\n    135,\n    229,\n    136,\n    247,\n    23,\n    179,\n    23,\n    87,\n    68,\n    193,\n    40,\n    142,\n    35,\n    254,\n    231,\n    90,\n    105,\n    218,\n    138,\n    1,\n    84,\n    118,\n    145,\n    136,\n    151,\n    104,\n    52,\n    66,\n    70,\n    59,\n    34,\n    88,\n    32,\n    29,\n    170,\n    152,\n    237,\n    200,\n    129,\n    94,\n    129,\n    209,\n    141,\n    77,\n    231,\n    45,\n    147,\n    198,\n    188,\n    27,\n    213,\n    7,\n    186,\n    131,\n    165,\n    201,\n    163,\n    175,\n    182,\n    181,\n    175,\n    151,\n    92,\n    65,\n    218\n  ],\n  \"sender_sig\": [\n    29,\n    62,\n    31,\n    110,\n    107,\n    212,\n    252,\n    145,\n    11,\n    233,\n    203,\n    141,\n    225,\n    200,\n    109,\n    51,\n    71,\n    136,\n    156,\n    39,\n    157,\n    67,\n    233,\n    255,\n    77,\n    154,\n    120,\n    160,\n    5,\n    21,\n    169,\n    167,\n    122,\n    107,\n    251,\n    72,\n    29,\n    195,\n    7,\n    53,\n    92,\n    18,\n    50,\n    214,\n    24,\n    92,\n    178,\n    124,\n    230,\n    184,\n    104,\n    114,\n    106,\n    169,\n    97,\n    204,\n    127,\n    93,\n    169,\n    116,\n    208,\n    10,\n    173,\n    23\n  ],\n  \"sender_delegation\": [\n    {\n      \"delegation\": {\n        \"pubkey\": [\n          48,\n          89,\n          48,\n          19,\n          6,\n          7,\n          42,\n          134,\n          72,\n          206,\n          61,\n          2,\n          1,\n          6,\n          8,\n          42,\n          134,\n          72,\n          206,\n          61,\n          3,\n          1,\n          7,\n          3,\n          66,\n          0,\n          4,\n          208,\n          30,\n          95,\n          58,\n          156,\n          218,\n          255,\n          135,\n          218,\n          27,\n          200,\n          160,\n          240,\n          63,\n          153,\n          234,\n          177,\n          89,\n          54,\n          227,\n          148,\n          135,\n          74,\n          197,\n          208,\n          74,\n          174,\n          182,\n          220,\n          234,\n          225,\n          238,\n          86,\n          154,\n          252,\n          246,\n          17,\n          144,\n          208,\n          183,\n          3,\n          32,\n          64,\n          195,\n          58,\n          232,\n          187,\n          114,\n          154,\n          183,\n          193,\n          175,\n          18,\n          175,\n          248,\n          251,\n          101,\n          174,\n          113,\n          149,\n          56,\n          208,\n          200,\n          175\n        ],\n        \"expiration\": 1695807737170000000,\n        \"targets\": [\n          \"rdmx6-jaaaa-aaaaa-aaadq-cai\"\n        ]\n      },\n      \"signature\": [\n        217,\n        217,\n        247,\n        163,\n        105,\n        115,\n        105,\n        103,\n        110,\n        97,\n        116,\n        117,\n        114,\n        101,\n        88,\n        72,\n        48,\n        70,\n        2,\n        33,\n        0,\n        169,\n        138,\n        20,\n        136,\n        214,\n        189,\n        118,\n        149,\n        35,\n        56,\n        96,\n        87,\n        116,\n        87,\n        0,\n        169,\n        22,\n        37,\n        124,\n        167,\n        163,\n        1,\n        161,\n        41,\n        140,\n        207,\n        53,\n        119,\n        218,\n        224,\n        100,\n        133,\n        2,\n        33,\n        0,\n        221,\n        146,\n        0,\n        184,\n        224,\n        71,\n        46,\n        165,\n        134,\n        250,\n        138,\n        163,\n        64,\n        242,\n        68,\n        121,\n        137,\n        212,\n        89,\n        116,\n        0,\n        207,\n        86,\n        227,\n        63,\n        224,\n        235,\n        48,\n        151,\n        175,\n        137,\n        8,\n        112,\n        99,\n        108,\n        105,\n        101,\n        110,\n        116,\n        95,\n        100,\n        97,\n        116,\n        97,\n        95,\n        106,\n        115,\n        111,\n        110,\n        120,\n        173,\n        123,\n        34,\n        116,\n        121,\n        112,\n        101,\n        34,\n        58,\n        34,\n        119,\n        101,\n        98,\n        97,\n        117,\n        116,\n        104,\n        110,\n        46,\n        103,\n        101,\n        116,\n        34,\n        44,\n        34,\n        99,\n        104,\n        97,\n        108,\n        108,\n        101,\n        110,\n        103,\n        101,\n        34,\n        58,\n        34,\n        71,\n        109,\n        108,\n        106,\n        76,\n        88,\n        74,\n        108,\n        99,\n        88,\n        86,\n        108,\n        99,\n        51,\n        81,\n        116,\n        89,\n        88,\n        86,\n        48,\n        97,\n        67,\n        49,\n        107,\n        90,\n        87,\n        120,\n        108,\n        90,\n        50,\n        70,\n        48,\n        97,\n        87,\n        57,\n        117,\n        122,\n        90,\n        50,\n        101,\n        113,\n        105,\n        81,\n        56,\n        80,\n        113,\n        103,\n        97,\n        111,\n        72,\n        103,\n        104,\n        116,\n        85,\n        75,\n        80,\n        107,\n        95,\n        56,\n        85,\n        69,\n        70,\n        110,\n        53,\n        79,\n        122,\n        90,\n        116,\n        76,\n        86,\n        85,\n        83,\n        95,\n        84,\n        115,\n        110,\n        121,\n        85,\n        48,\n        34,\n        44,\n        34,\n        111,\n        114,\n        105,\n        103,\n        105,\n        110,\n        34,\n        58,\n        34,\n        104,\n        116,\n        116,\n        112,\n        115,\n        58,\n        47,\n        47,\n        105,\n        100,\n        101,\n        110,\n        116,\n        105,\n        116,\n        121,\n        46,\n        105,\n        99,\n        48,\n        46,\n        97,\n        112,\n        112,\n        34,\n        44,\n        34,\n        99,\n        114,\n        111,\n        115,\n        115,\n        79,\n        114,\n        105,\n        103,\n        105,\n        110,\n        34,\n        58,\n        102,\n        97,\n        108,\n        115,\n        101,\n        125,\n        114,\n        97,\n        117,\n        116,\n        104,\n        101,\n        110,\n        116,\n        105,\n        99,\n        97,\n        116,\n        111,\n        114,\n        95,\n        100,\n        97,\n        116,\n        97,\n        88,\n        37,\n        22,\n        9,\n        119,\n        0,\n        137,\n        168,\n        232,\n        142,\n        63,\n        241,\n        220,\n        157,\n        114,\n        140,\n        177,\n        199,\n        206,\n        255,\n        148,\n        156,\n        107,\n        79,\n        130,\n        137,\n        176,\n        178,\n        245,\n        253,\n        135,\n        44,\n        173,\n        51,\n        1,\n        0,\n        0,\n        0,\n        227\n      ]\n    }\n  ]\n}".to_string()
+            decoded_request: "{\n  \"content\": {\n    \"request_type\": \"read_state\",\n    \"ingress_expiry\": 1695807388233000000,\n    \"sender\": \"beww7-mkqch-snxsk-fuyra-2qtgr-7k5sz-63msb-4i76g-zowbr-lpufz-oae\",\n    \"paths\": [\n      [\n        [\n          114,\n          101,\n          113,\n          117,\n          101,\n          115,\n          116,\n          95,\n          115,\n          116,\n          97,\n          116,\n          117,\n          115\n        ],\n        [\n          161,\n          122,\n          85,\n          66,\n          232,\n          199,\n          243,\n          43,\n          170,\n          133,\n          2,\n          220,\n          174,\n          39,\n          219,\n          48,\n          95,\n          183,\n          254,\n          84,\n          255,\n          123,\n          191,\n          242,\n          252,\n          90,\n          167,\n          149,\n          216,\n          27,\n          219,\n          18\n        ]\n      ]\n    ]\n  },\n  \"sender_pubkey\": [\n    48,\n    94,\n    48,\n    12,\n    6,\n    10,\n    43,\n    6,\n    1,\n    4,\n    1,\n    131,\n    184,\n    67,\n    1,\n    1,\n    3,\n    78,\n    0,\n    165,\n    1,\n    2,\n    3,\n    38,\n    32,\n    1,\n    33,\n    88,\n    32,\n    241,\n    19,\n    135,\n    229,\n    136,\n    247,\n    23,\n    179,\n    23,\n    87,\n    68,\n    193,\n    40,\n    142,\n    35,\n    254,\n    231,\n    90,\n    105,\n    218,\n    138,\n    1,\n    84,\n    118,\n    145,\n    136,\n    151,\n    104,\n    52,\n    66,\n    70,\n    59,\n    34,\n    88,\n    32,\n    29,\n    170,\n    152,\n    237,\n    200,\n    129,\n    94,\n    129,\n    209,\n    141,\n    77,\n    231,\n    45,\n    147,\n    198,\n    188,\n    27,\n    213,\n    7,\n    186,\n    131,\n    165,\n    201,\n    163,\n    175,\n    182,\n    181,\n    175,\n    151,\n    92,\n    65,\n    218\n  ],\n  \"sender_sig\": [\n    29,\n    62,\n    31,\n    110,\n    107,\n    212,\n    252,\n    145,\n    11,\n    233,\n    203,\n    141,\n    225,\n    200,\n    109,\n    51,\n    71,\n    136,\n    156,\n    39,\n    157,\n    67,\n    233,\n    255,\n    77,\n    154,\n    120,\n    160,\n    5,\n    21,\n    169,\n    167,\n    122,\n    107,\n    251,\n    72,\n    29,\n    195,\n    7,\n    53,\n    92,\n    18,\n    50,\n    214,\n    24,\n    92,\n    178,\n    124,\n    230,\n    184,\n    104,\n    114,\n    106,\n    169,\n    97,\n    204,\n    127,\n    93,\n    169,\n    116,\n    208,\n    10,\n    173,\n    23\n  ],\n  \"sender_delegation\": [\n    {\n      \"delegation\": {\n        \"pubkey\": [\n          48,\n          89,\n          48,\n          19,\n          6,\n          7,\n          42,\n          134,\n          72,\n          206,\n          61,\n          2,\n          1,\n          6,\n          8,\n          42,\n          134,\n          72,\n          206,\n          61,\n          3,\n          1,\n          7,\n          3,\n          66,\n          0,\n          4,\n          208,\n          30,\n          95,\n          58,\n          156,\n          218,\n          255,\n          135,\n          218,\n          27,\n          200,\n          160,\n          240,\n          63,\n          153,\n          234,\n          177,\n          89,\n          54,\n          227,\n          148,\n          135,\n          74,\n          197,\n          208,\n          74,\n          174,\n          182,\n          220,\n          234,\n          225,\n          238,\n          86,\n          154,\n          252,\n          246,\n          17,\n          144,\n          208,\n          183,\n          3,\n          32,\n          64,\n          195,\n          58,\n          232,\n          187,\n          114,\n          154,\n          183,\n          193,\n          175,\n          18,\n          175,\n          248,\n          251,\n          101,\n          174,\n          113,\n          149,\n          56,\n          208,\n          200,\n          175\n        ],\n        \"expiration\": 1695807737170000000,\n        \"targets\": [\n          \"rdmx6-jaaaa-aaaaa-aaadq-cai\"\n        ]\n      },\n      \"signature\": [\n        217,\n        217,\n        247,\n        163,\n        105,\n        115,\n        105,\n        103,\n        110,\n        97,\n        116,\n        117,\n        114,\n        101,\n        88,\n        72,\n        48,\n        70,\n        2,\n        33,\n        0,\n        169,\n        138,\n        20,\n        136,\n        214,\n        189,\n        118,\n        149,\n        35,\n        56,\n        96,\n        87,\n        116,\n        87,\n        0,\n        169,\n        22,\n        37,\n        124,\n        167,\n        163,\n        1,\n        161,\n        41,\n        140,\n        207,\n        53,\n        119,\n        218,\n        224,\n        100,\n        133,\n        2,\n        33,\n        0,\n        221,\n        146,\n        0,\n        184,\n        224,\n        71,\n        46,\n        165,\n        134,\n        250,\n        138,\n        163,\n        64,\n        242,\n        68,\n        121,\n        137,\n        212,\n        89,\n        116,\n        0,\n        207,\n        86,\n        227,\n        63,\n        224,\n        235,\n        48,\n        151,\n        175,\n        137,\n        8,\n        112,\n        99,\n        108,\n        105,\n        101,\n        110,\n        116,\n        95,\n        100,\n        97,\n        116,\n        97,\n        95,\n        106,\n        115,\n        111,\n        110,\n        120,\n        173,\n        123,\n        34,\n        116,\n        121,\n        112,\n        101,\n        34,\n        58,\n        34,\n        119,\n        101,\n        98,\n        97,\n        117,\n        116,\n        104,\n        110,\n        46,\n        103,\n        101,\n        116,\n        34,\n        44,\n        34,\n        99,\n        104,\n        97,\n        108,\n        108,\n        101,\n        110,\n        103,\n        101,\n        34,\n        58,\n        34,\n        71,\n        109,\n        108,\n        106,\n        76,\n        88,\n        74,\n        108,\n        99,\n        88,\n        86,\n        108,\n        99,\n        51,\n        81,\n        116,\n        89,\n        88,\n        86,\n        48,\n        97,\n        67,\n        49,\n        107,\n        90,\n        87,\n        120,\n        108,\n        90,\n        50,\n        70,\n        48,\n        97,\n        87,\n        57,\n        117,\n        122,\n        90,\n        50,\n        101,\n        113,\n        105,\n        81,\n        56,\n        80,\n        113,\n        103,\n        97,\n        111,\n        72,\n        103,\n        104,\n        116,\n        85,\n        75,\n        80,\n        107,\n        95,\n        56,\n        85,\n        69,\n        70,\n        110,\n        53,\n        79,\n        122,\n        90,\n        116,\n        76,\n        86,\n        85,\n        83,\n        95,\n        84,\n        115,\n        110,\n        121,\n        85,\n        48,\n        34,\n        44,\n        34,\n        111,\n        114,\n        105,\n        103,\n        105,\n        110,\n        34,\n        58,\n        34,\n        104,\n        116,\n        116,\n        112,\n        115,\n        58,\n        47,\n        47,\n        105,\n        100,\n        101,\n        110,\n        116,\n        105,\n        116,\n        121,\n        46,\n        105,\n        99,\n        48,\n        46,\n        97,\n        112,\n        112,\n        34,\n        44,\n        34,\n        99,\n        114,\n        111,\n        115,\n        115,\n        79,\n        114,\n        105,\n        103,\n        105,\n        110,\n        34,\n        58,\n        102,\n        97,\n        108,\n        115,\n        101,\n        125,\n        114,\n        97,\n        117,\n        116,\n        104,\n        101,\n        110,\n        116,\n        105,\n        99,\n        97,\n        116,\n        111,\n        114,\n        95,\n        100,\n        97,\n        116,\n        97,\n        88,\n        37,\n        22,\n        9,\n        119,\n        0,\n        137,\n        168,\n        232,\n        142,\n        63,\n        241,\n        220,\n        157,\n        114,\n        140,\n        177,\n        199,\n        206,\n        255,\n        148,\n        156,\n        107,\n        79,\n        130,\n        137,\n        176,\n        178,\n        245,\n        253,\n        135,\n        44,\n        173,\n        51,\n        1,\n        0,\n        0,\n        0,\n        227\n      ]\n    }\n  ]\n}".to_string(),
+        });
+    }
+
+    #[test]
+    fn get_readstate_metadata() {
+        let request = hex::decode(READ_STATE_REQUEST).unwrap();
+
+        let res = get_request_metadata(request).unwrap();
+
+        assert_eq!(res, RequestMetadata::ReadState {
+            request_id: vec![161, 122, 85, 66, 232, 199, 243, 43, 170, 133, 2, 220, 174, 39, 219, 48, 95, 183, 254, 84, 255, 123, 191, 242, 252, 90, 167, 149, 216, 27, 219, 18],
         });
     }
 

@@ -23,10 +23,10 @@ class JnaIcToolsTest {
         for (int i = 0; i < 1_000_000; i++) {
             System.out.println(i);
             var res = jnaTools.decodeCanisterRequest(queryBin, Optional.empty());
-            assertEquals(res.type, RequestType.QUERY);
-            assertEquals(res.requestId, "Wca4JtAFIbaLi7CvLamBFFLsUJCIRh6EMUkaYQ7XmgM");
-            assertEquals(res.canisterMethod, Optional.of("http_request"));
-            assertEquals(res.decodedRequest, """
+            assertEquals(res.type(), RequestType.QUERY);
+            assertEquals(res.requestId(), "Wca4JtAFIbaLi7CvLamBFFLsUJCIRh6EMUkaYQ7XmgM");
+            assertEquals(res.canisterMethod(), Optional.of("http_request"));
+            assertEquals(res.decodedRequest(), """
                     {
                       "content": {
                         "request_type": "query",
