@@ -17,7 +17,7 @@ public class JnaCanisterInterfaceInfo extends Structure {
     }
 
     public static JnaCanisterInterfaceInfo from(Optional<CanisterInterfaceInfo> canisterInterfaceInfo) {
-        return canisterInterfaceInfo.map(inf -> new JnaCanisterInterfaceInfo(inf.canisterInterface, inf.canisterMethod)).orElseGet(JnaCanisterInterfaceInfo::unknown);
+        return canisterInterfaceInfo.map(inf -> new JnaCanisterInterfaceInfo(inf.canisterInterface(), inf.canisterMethod())).orElseGet(JnaCanisterInterfaceInfo::unknown);
     }
 
     public static JnaCanisterInterfaceInfo unknown() {

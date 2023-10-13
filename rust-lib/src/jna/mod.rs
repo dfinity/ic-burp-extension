@@ -1,15 +1,25 @@
-
-mod model;
-
 use std::ffi::{CStr, CString};
 use std::mem;
 use std::os::raw::c_char;
 use std::ptr::null;
+
 use model::DecodeCanisterRequestResult;
-use crate::{
-    encode,
-};
-use crate::jna::model::{CanisterInterfaceInfo, DecodeCanisterResponseResult};
+
+use crate::{canister_lookup, encode};
+use crate::jna::model::{CanisterInterfaceInfo, DecodeCanisterResponseResult, DiscoverCanisterInterfaceResult, GetRequestMetadataResult};
+
+mod model;
+
+#[no_mangle]
+#[tokio::main]
+pub async extern fn discover_canister_interface(canister_id: *const c_char) -> DiscoverCanisterInterfaceResult {
+    canister_lookup::discover_canister_interface(to_string(canister_id), None).await.into()
+}
+
+#[no_mangle]
+pub extern fn get_request_metadata(encoded_cbor_request: *const u8, encoded_cbor_request_size: usize) -> GetRequestMetadataResult {
+    encode::get_request_metadata(to_vec(encoded_cbor_request, encoded_cbor_request_size)).into()
+}
 
 #[no_mangle]
 pub extern fn decode_canister_request(encoded_cbor_request: *const u8, encoded_cbor_request_size: usize, canister_interface_opt: *const c_char) -> DecodeCanisterRequestResult {
@@ -27,7 +37,7 @@ pub extern fn decode_canister_response(encoded_cbor_response: *const u8, encoded
     let canister_interface_info = if canister_interface_info_opt.canister_interface == null() || canister_interface_info_opt.canister_method == null() {
         None
     } else {
-        Some(encode::model::CanisterInterfaceInfo{
+        Some(encode::model::CanisterInterfaceInfo {
             canister_interface: to_string(canister_interface_info_opt.canister_interface),
             canister_method: to_string(canister_interface_info_opt.canister_method),
         })
@@ -44,7 +54,7 @@ fn to_string(pointer: *const c_char) -> String {
 /// Convert a Rust string to a native string
 fn str_to_ptr(string: String) -> *const c_char {
     if string.len() == 0 {
-        return null()
+        return null();
     }
     let cs = CString::new(string.as_bytes()).unwrap();
     let ptr = cs.as_ptr();
@@ -53,14 +63,15 @@ fn str_to_ptr(string: String) -> *const c_char {
     mem::forget(cs);
     ptr
 }
- fn to_vec(buf: *const u8, size: usize) -> Vec<u8> {
-     let mut v = Vec::with_capacity(size);
-     unsafe {
-         for i in 0..size {
-             v.push(buf.add(i).read());
-         }
-     }
-     v
+
+fn to_vec(buf: *const u8, size: usize) -> Vec<u8> {
+    let mut v = Vec::with_capacity(size);
+    unsafe {
+        for i in 0..size {
+            v.push(buf.add(i).read());
+        }
+    }
+    v
 }
 
 fn vec_to_ptr(vec: Vec<u8>) -> (*const u8, usize) {

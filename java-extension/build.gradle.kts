@@ -12,6 +12,7 @@ repositories {
 dependencies {
     implementation("net.portswigger.burp.extensions:montoya-api:2023.10.3")
     implementation("net.java.dev.jna:jna:5.13.0")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
     testImplementation(platform("org.junit:junit-bom:5.9.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.mockito:mockito-core:5.6.0")
@@ -23,6 +24,7 @@ tasks.test {
 }
 
 tasks.withType<Jar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(configurations.compileClasspath.get().map { if (it.isDirectory()) it else zipTree(it) })
 }
 

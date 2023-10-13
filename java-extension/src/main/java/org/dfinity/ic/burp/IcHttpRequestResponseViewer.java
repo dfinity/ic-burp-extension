@@ -6,33 +6,54 @@ import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.requests.MalformedRequestException;
 import burp.api.montoya.http.message.responses.HttpResponse;
+import burp.api.montoya.logging.Logging;
 import burp.api.montoya.ui.Selection;
 import burp.api.montoya.ui.editor.EditorOptions;
 import burp.api.montoya.ui.editor.RawEditor;
 import burp.api.montoya.ui.editor.extension.ExtensionProvidedHttpRequestEditor;
 import burp.api.montoya.ui.editor.extension.ExtensionProvidedHttpResponseEditor;
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.Cache;
+import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.IcTools;
+import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
+import org.dfinity.ic.burp.tools.model.RequestMetadata;
 
 import java.awt.Component;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequestEditor, ExtensionProvidedHttpResponseEditor {
 
-    private static final String IC_API_PATH_REGEX = "/api/v2/canister/(.+)/(query|call|read_state)";
+    private static final Pattern IC_API_PATH_REGEX = Pattern.compile("/api/v2/canister/(?<cid>[^/]+)/(query|call|read_state)");
 
+    private final Logging log;
     private final IcTools icTools;
+    private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
+    private final Cache<String, RequestMetadata> callRequestCache;
     private final RawEditor requestEditor;
     private final boolean isRequest;
     private final Function<String, ByteArray> byteArrayFactory;
     private HttpRequestResponse requestResponse;
 
-    public IcHttpRequestResponseViewer(MontoyaApi api, IcTools icTools, boolean isRequest, Optional<Function<String, ByteArray>> byteArrayFactory) {
+    public IcHttpRequestResponseViewer(MontoyaApi api, IcTools icTools, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, Cache<String, RequestMetadata> callRequestCache, boolean isRequest, Optional<Function<String, ByteArray>> byteArrayFactory) {
+        this.log = api.logging();
         this.icTools = icTools;
+        this.canisterInterfaceCache = canisterInterfaceCache;
+        this.callRequestCache = callRequestCache;
         this.isRequest = isRequest;
         this.byteArrayFactory = byteArrayFactory.orElse(ByteArray::byteArray);
         requestEditor = api.userInterface().createRawEditor(EditorOptions.READ_ONLY);
+    }
+
+    private static Optional<String> getCanisterId(String path) {
+        var matcher = IC_API_PATH_REGEX.matcher(path);
+        if (matcher.matches()) {
+            return Optional.ofNullable(matcher.group("cid"));
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -48,34 +69,63 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
     @Override
     public void setRequestResponse(HttpRequestResponse requestResponse) {
         this.requestResponse = requestResponse;
-        String content;
-        if (isRequest) {
-            try {
-                var res = icTools.decodeCanisterRequest(requestResponse.request().body().getBytes(), Optional.empty());
-                content = res.decodedRequest;
-            } catch (IcToolsException e) {
-                content = String.format("Failed to decode request: %s", e.getStackTraceAsString());
+
+        var cid = getCanisterId(requestResponse.request().path()).orElseThrow(() -> new RuntimeException("canister id not present in " + requestResponse.request()));
+        canisterInterfaceCache.get(cid).thenAccept(canisterCacheInfo -> {
+            Optional<String> canisterInterface = canisterCacheInfo == null ? Optional.empty() : canisterCacheInfo.canisterInterface();
+            String content;
+            if (isRequest) {
+                try {
+                    var res = icTools.decodeCanisterRequest(requestResponse.request().body().getBytes(), canisterInterface);
+                    content = res.decodedRequest();
+                } catch (IcToolsException e) {
+                    log.logToError("Failed to decode request with path " + requestResponse.request().path(), e);
+                    content = String.format("Failed to decode request with path %s: %s", requestResponse.request().path(), e.getStackTraceAsString());
+                }
+            } else {
+                try {
+                    Optional<CanisterInterfaceInfo> canisterInterfaceInfo;
+                    if (canisterInterface.isPresent()) {
+                        var metadata = icTools.getRequestMetadata(requestResponse.request().body().getBytes());
+
+                        if (requestResponse.request().path().endsWith("/query")) {
+                            canisterInterfaceInfo = metadata.canisterMethod().map(m -> new CanisterInterfaceInfo(canisterInterface.get(), m));
+                        } else { // read_state
+                            canisterInterfaceInfo = Optional.ofNullable(callRequestCache.getIfPresent(metadata.requestId())).flatMap(RequestMetadata::canisterMethod).map(m -> new CanisterInterfaceInfo(canisterInterface.get(), m));
+                        }
+                    } else {
+                        canisterInterfaceInfo = Optional.empty();
+                    }
+                    content = icTools.decodeCanisterResponse(requestResponse.response().body().getBytes(), canisterInterfaceInfo);
+                } catch (IcToolsException e) {
+                    log.logToError("Failed to decode response with path " + requestResponse.request().path(), e);
+                    content = String.format("Failed to decode response with path %s: %s", requestResponse.request().path(), e.getStackTraceAsString());
+                }
             }
-        } else {
-            try {
-                content = icTools.decodeCanisterResponse(requestResponse.response().body().getBytes(), Optional.empty());
-            } catch (IcToolsException e) {
-                content = String.format("Failed to decode response: %s", e.getStackTraceAsString());
-            }
-        }
-        this.requestEditor.setContents(byteArrayFactory.apply(content));
+            this.requestEditor.setContents(byteArrayFactory.apply(content));
+        }).join();
     }
 
     @Override
     public boolean isEnabledFor(HttpRequestResponse requestResponse) {
+        if (requestResponse.request() == null || (!isRequest && !requestResponse.hasResponse()))
+            return false;
+
         try {
-            var request_path = requestResponse.request().path();
+            var path = requestResponse.request().path();
             var content_type = isRequest ? requestResponse.request().header("Content-Type") : requestResponse.response().header("Content-Type");
             var content_length = isRequest ? requestResponse.request().header("Content-Length") : requestResponse.response().header("Content-Length");
-            return content_type != null && content_type.value().equals("application/cbor") && content_length != null && !content_length.value().equals("0") && request_path.matches(IC_API_PATH_REGEX);
-        } catch (MalformedRequestException e) {
-            return false;
+            if (content_type != null && content_type.value().equals("application/cbor") && content_length != null && !content_length.value().equals("0")) {
+                var cid = getCanisterId(path);
+                if (cid.isPresent()) {
+                    // kick off interface resolution already here, so we get it faster in setRequestResponse
+                    canisterInterfaceCache.get(cid.get());
+                    return true;
+                }
+            }
+        } catch (MalformedRequestException ignored) {
         }
+        return false;
     }
 
     @Override
