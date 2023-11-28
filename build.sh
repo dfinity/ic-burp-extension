@@ -19,6 +19,9 @@ fi
 # build new lib files and copy them into resources
 cd "$SCRIPT_PATH/rust-lib"
 cargo build --release
+
+mkdir -p "$SCRIPT_PATH/java-extension/src/main/resources"
+
 if [ -f "target/release/$LIB_NAME_OSX" ]; then
 	cp "target/release/$LIB_NAME_OSX" "$SCRIPT_PATH/java-extension/src/main/resources/"
 fi

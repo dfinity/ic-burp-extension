@@ -15,11 +15,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.IcTools;
-import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
-import org.dfinity.ic.burp.tools.model.IcToolsException;
-import org.dfinity.ic.burp.tools.model.RequestInfo;
-import org.dfinity.ic.burp.tools.model.RequestMetadata;
-import org.dfinity.ic.burp.tools.model.RequestType;
+import org.dfinity.ic.burp.tools.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,20 +29,15 @@ import org.mockito.quality.Strictness;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class IcHttpRequestResponseViewerTest {
 
     private final byte[] BODY_BYTES = new byte[]{0, 1, 2, 3};
-    private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache = Caffeine.newBuilder().buildAsync(x -> new CanisterCacheInfo(Optional.of(x)));
+    private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache = Caffeine.newBuilder().buildAsync(x -> new CanisterCacheInfo(Optional.of(x), InterfaceType.AUTOMATIC));
     private final Cache<String, RequestMetadata> callRequestCache = Caffeine.newBuilder().build();
     @Mock
     HttpRequestResponse requestResponse;

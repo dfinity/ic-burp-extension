@@ -14,6 +14,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
+import org.dfinity.ic.burp.tools.model.InterfaceType;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
 import org.dfinity.ic.burp.tools.model.RequestType;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +39,7 @@ class IcCacheRefreshTest {
 
     private static final RequestMetadata META_DATA = new RequestMetadata(RequestType.CALL, "request_id", Optional.of("canister_method"));
     private final byte[] BODY_BYTES = new byte[]{0, 1, 2, 3};
-    private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache = Caffeine.newBuilder().buildAsync(a -> new CanisterCacheInfo(Optional.of(a)));
+    private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache = Caffeine.newBuilder().buildAsync(a -> new CanisterCacheInfo(Optional.of(a), InterfaceType.AUTOMATIC));
     private final Cache<String, RequestMetadata> callRequestCache = Caffeine.newBuilder().build();
 
     @Mock
@@ -110,7 +111,7 @@ class IcCacheRefreshTest {
         var res = cacheRefresh.handleHttpRequestToBeSent(request);
 
         assertEquals(requestAction, res);
-        assertEquals(new CanisterCacheInfo(Optional.of("4c4fd-caaaa-aaaaq-aaa3a-cai")), canisterInterfaceCache.get("4c4fd-caaaa-aaaaq-aaa3a-cai").join());
+        assertEquals(new CanisterCacheInfo(Optional.of("4c4fd-caaaa-aaaaq-aaa3a-cai"), InterfaceType.AUTOMATIC), canisterInterfaceCache.get("4c4fd-caaaa-aaaaq-aaa3a-cai").join());
     }
 
     @Test

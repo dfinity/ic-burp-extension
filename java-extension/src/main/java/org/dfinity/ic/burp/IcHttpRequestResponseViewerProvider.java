@@ -1,11 +1,7 @@
 package org.dfinity.ic.burp;
 
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.ui.editor.extension.EditorCreationContext;
-import burp.api.montoya.ui.editor.extension.ExtensionProvidedHttpRequestEditor;
-import burp.api.montoya.ui.editor.extension.ExtensionProvidedHttpResponseEditor;
-import burp.api.montoya.ui.editor.extension.HttpRequestEditorProvider;
-import burp.api.montoya.ui.editor.extension.HttpResponseEditorProvider;
+import burp.api.montoya.ui.editor.extension.*;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;

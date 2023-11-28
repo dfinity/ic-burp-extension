@@ -1,10 +1,6 @@
 package org.dfinity.ic.burp;
 
-import burp.api.montoya.http.handler.HttpHandler;
-import burp.api.montoya.http.handler.HttpRequestToBeSent;
-import burp.api.montoya.http.handler.HttpResponseReceived;
-import burp.api.montoya.http.handler.RequestToBeSentAction;
-import burp.api.montoya.http.handler.ResponseReceivedAction;
+import burp.api.montoya.http.handler.*;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.requests.MalformedRequestException;
 import burp.api.montoya.http.message.responses.HttpResponse;
@@ -52,6 +48,7 @@ public class IcCacheRefresh implements HttpHandler {
 
     @Override
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent requestToBeSent) {
+        log.logToOutput("IcCacheRefresh.handleHttpRequestToBeSent");
         try {
             var urlInfo = getUrlInfo(requestToBeSent.path());
             if (urlInfo.isPresent()) {
@@ -74,6 +71,7 @@ public class IcCacheRefresh implements HttpHandler {
 
     @Override
     public ResponseReceivedAction handleHttpResponseReceived(HttpResponseReceived responseReceived) {
+        log.logToOutput("IcCacheRefresh.handleHttpResponseReceived");
         return continueWithResponse.apply(responseReceived);
     }
 
