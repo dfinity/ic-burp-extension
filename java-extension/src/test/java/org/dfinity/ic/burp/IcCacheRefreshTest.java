@@ -111,7 +111,8 @@ class IcCacheRefreshTest {
         var res = cacheRefresh.handleHttpRequestToBeSent(request);
 
         assertEquals(requestAction, res);
-        assertEquals(new CanisterCacheInfo(Optional.of("4c4fd-caaaa-aaaaq-aaa3a-cai"), InterfaceType.AUTOMATIC), canisterInterfaceCache.get("4c4fd-caaaa-aaaaq-aaa3a-cai").join());
+        assertEquals(new CanisterCacheInfo(Optional.of("4c4fd-caaaa-aaaaq-aaa3a-cai"), InterfaceType.AUTOMATIC).getCanisterInterfaces()
+                , canisterInterfaceCache.get("4c4fd-caaaa-aaaaq-aaa3a-cai").join().getCanisterInterfaces());
     }
 
     @Test

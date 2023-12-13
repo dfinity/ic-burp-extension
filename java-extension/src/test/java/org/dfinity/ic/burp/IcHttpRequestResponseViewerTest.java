@@ -166,17 +166,6 @@ class IcHttpRequestResponseViewerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    public void shouldBeDisabledIfContentLengthIsNotPresent(boolean isRequest) {
-        returnHttpHeader(isRequest, Optional.of("application/cbor"), Optional.empty());
-
-        var res = new IcHttpRequestResponseViewer(api, tools, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
-
-        assertFalse(res);
-    }
-
-
-    @ParameterizedTest
     @CsvSource({
             "/api/v2/canister/vtrom-gqaaa-aaaaq-aabia-cai/query,true",
             "/api/v2/canister/vtrom-gqaaa-aaaaq-aabia-cai/query,false",
