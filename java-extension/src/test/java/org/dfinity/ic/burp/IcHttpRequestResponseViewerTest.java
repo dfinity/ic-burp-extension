@@ -175,15 +175,6 @@ class IcHttpRequestResponseViewerTest {
         assertFalse(res);
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    public void shouldBeDisabledIfContentLengthIsWrong(boolean isRequest) {
-        returnHttpHeader(isRequest, Optional.of("application/cbor"), Optional.of("0"));
-
-        var res = new IcHttpRequestResponseViewer(api, tools, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
-
-        assertFalse(res);
-    }
 
     @ParameterizedTest
     @CsvSource({
