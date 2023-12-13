@@ -50,14 +50,14 @@ public class IDLTableModel extends AbstractTableModel {
         try {
             Optional<String> cid = idlManagementPanel.getSelectedCID();
             if(cid.isEmpty()){
-                return "NOT FOUND";
+                return "Please select a canister.";
             }
 
             c = this.canisterInterfaceCache.synchronous().getIfPresent(cid.get());
             if(c == null)
-                return "NOT FOUND";
+                return "Please select a canister.";
         } catch (Exception e) {
-            return "NOT FOUND";
+            return "Please select a canister.";
         }
         Object[] keys = c.getCanisterInterfaces().keySet().toArray();
 

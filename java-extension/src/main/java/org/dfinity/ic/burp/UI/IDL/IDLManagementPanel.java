@@ -29,6 +29,8 @@ public class IDLManagementPanel extends JSplitPane {
         this.setDividerSize(5);
         this.setDividerLocation(250);
         this.idlPanel.setVisible(false);
+
+        this.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
     }
 
     public synchronized void onCacheLoad() {

@@ -3,9 +3,7 @@ package org.dfinity.ic.burp.model;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Optional;
-import java.util.Set;
 
 public class CanisterCacheInfo {
     private final HashMap<InterfaceType, Optional<String>> canisterInterfaces = new HashMap<>();

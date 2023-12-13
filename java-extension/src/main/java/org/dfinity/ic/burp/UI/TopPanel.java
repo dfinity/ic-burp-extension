@@ -15,7 +15,7 @@ public class TopPanel extends JTabbedPane {
 
     public TopPanel(Logging log, AsyncLoadingCache<String, CanisterCacheInfo>  canisterInterfaceCache) {
         this.idlManagementPanel = new IDLManagementPanel(log, canisterInterfaceCache);
-        this.identityMgmtPanel = new IdentityMgmtPanel();
+        this.identityMgmtPanel = new IdentityMgmtPanel(log);
         this.log = log;
         this.add("IC IDL Management", idlManagementPanel);
         this.add("IC Identity Management", identityMgmtPanel);

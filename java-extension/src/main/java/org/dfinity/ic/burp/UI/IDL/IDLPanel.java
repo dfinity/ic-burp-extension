@@ -36,8 +36,6 @@ public class IDLPanel extends JPanel{
         idlTable.setTableHeader(null);
 
         left.add(idlTable);
-        left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
-        left.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         left.add(Box.createRigidArea(new Dimension(0, 15)));
 
@@ -46,9 +44,18 @@ public class IDLPanel extends JPanel{
         left.add(Box.createRigidArea(new Dimension(0, 5)));
         SetActiveListener setActiveListener = new SetActiveListener(log, idlManagementPanel, canisterInterfaceCache);
         left.add(new ICButton(log, "Set as active", setActiveListener));
+        left.add(Box.createRigidArea(new Dimension(0, 15)));
+
+        JSeparator s = new JSeparator();
+        s.setMaximumSize(new Dimension(500,50));
+        left.add(s);
+
+        left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
+        left.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JPanel right = new JPanel();
         idlTextArea = new JTextArea("IDL CONTENT");
+        idlTextArea.setEditable(false);
         JLabel idlContentLabel = new JLabel("IDL Content");
 
         idlContentLabel.setFont(boldFont);

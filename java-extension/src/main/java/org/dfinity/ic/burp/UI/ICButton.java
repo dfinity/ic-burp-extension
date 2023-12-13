@@ -13,4 +13,9 @@ public class ICButton extends JButton {
         this.addActionListener(listener);
         this.setBackground(Color.lightGray);
     }
+
+    public ICButton(Logging log, String text) {
+        super(text);
+        this.setBackground(Color.lightGray);
+    }
 }
