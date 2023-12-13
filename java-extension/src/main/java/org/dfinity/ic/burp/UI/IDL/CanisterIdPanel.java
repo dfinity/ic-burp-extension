@@ -2,11 +2,15 @@ package org.dfinity.ic.burp.UI.IDL;
 
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import org.dfinity.ic.burp.DataPersister;
+import org.dfinity.ic.burp.UI.ICButton;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.Optional;
 
 public class CanisterIdPanel extends JPanel {
@@ -21,6 +25,8 @@ public class CanisterIdPanel extends JPanel {
         this.log = log;
         this.canisterInterfaceCache = canisterInterfaceCache;
         this.idlManagementPanel = idlManagementPanel;
+
+        this.add(new ICButton(log, "Store IDLs", e -> DataPersister.getInstance().storeCanisterInterfaceCache(canisterInterfaceCache)));
 
         canisterIdTable = new JTable(new CanisterIdTableModel(log, canisterInterfaceCache));
         canisterIdTable.setTableHeader(null);

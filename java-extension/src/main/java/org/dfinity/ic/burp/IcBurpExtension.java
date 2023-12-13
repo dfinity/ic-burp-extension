@@ -26,22 +26,10 @@ public class IcBurpExtension implements BurpExtension {
         var icTools = new JnaIcTools();
 
         CacheLoaderSubscriber l = new CacheLoaderSubscriber();
-        canisterInterfaceCache = Caffeine.newBuilder().buildAsync(
-                cid -> {
-                    api.logging().logToOutput("Resolving canister interface for: " + cid);
-                    CanisterCacheInfo val;
-                    try {
-                        Optional<String> idl = icTools.discoverCanisterInterface(cid);
-                        InterfaceType t = idl.isPresent() ? InterfaceType.AUTOMATIC : InterfaceType.FAILED;
-                        val = new CanisterCacheInfo(idl, t);
-                    } catch (IcToolsException e) {
-                        api.logging().logToError(String.format("discoverCanisterInterface failed for canisterId %s", cid), e);
-                        val = new CanisterCacheInfo(Optional.empty(), InterfaceType.FAILED);
-                    }
-                    l.onCacheLoad();
-                    return val;
-                }
-        );
+        DataPersister dataPersister = DataPersister.getInstance();
+        dataPersister.init(api.logging(), icTools, api.persistence().extensionData(), l);
+        canisterInterfaceCache = dataPersister.getCanisterInterfaceCache();
+
         Cache<String, RequestMetadata> callRequestCache = Caffeine.newBuilder().maximumSize(10_000).build();
         var viewerProvider = new IcHttpRequestResponseViewerProvider(api, icTools, canisterInterfaceCache, callRequestCache);
         api.userInterface().registerHttpRequestEditorProvider(viewerProvider);

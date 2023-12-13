@@ -13,6 +13,10 @@ public class CanisterCacheInfo {
         this.activeCanisterInterfaceType = type;
     }
 
+    public CanisterCacheInfo() {
+
+    }
+
     public void putCanisterInterface(Optional<String> canisterInterface, InterfaceType type) {
         this.canisterInterfaces.put(type, canisterInterface);
         this.activeCanisterInterfaceType = type;
