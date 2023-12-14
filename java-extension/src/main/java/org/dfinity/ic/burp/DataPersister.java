@@ -64,34 +64,31 @@ public class DataPersister {
         log.logToOutput("Adding the following CIDs to cache from persistent storage: \n" + canisterInterfaceCachePO.childObjectKeys());
 
         for (String cid : canisterInterfaceCachePO.childObjectKeys()){
-            PersistedObject nextPO = canisterInterfaceCachePO.getChildObject(cid);
-            if(nextPO == null) continue; // This shouldn't happen as we just fetched the available keys.
+            PersistedObject canisterCacheInfoPO = canisterInterfaceCachePO.getChildObject(cid);
+            if(canisterCacheInfoPO == null) continue; // This shouldn't happen as we just fetched the available keys.
             CanisterCacheInfo info = new CanisterCacheInfo();
 
-            log.logToOutput("ActiveCanisterInterfaceType from storage: " + nextPO.getString("ActiveCanisterInterfaceType"));
+            log.logToOutput("ActiveCanisterInterfaceType from storage: " + canisterCacheInfoPO.getString("ActiveCanisterInterfaceType"));
             try {
-                InterfaceType type = InterfaceType.valueOf(nextPO.getString("ActiveCanisterInterfaceType"));
+                InterfaceType type = InterfaceType.valueOf(canisterCacheInfoPO.getString("ActiveCanisterInterfaceType"));
                 info.setActiveCanisterInterfaceType(type);
             } catch (Exception e){
                 log.logToError("Active canister interface type could not be deserialized to enum.");
             }
-
-            for(String t: nextPO.stringKeys()){
-                if(t.equals("ActiveCanisterInterfaceType")) continue;
-                log.logToOutput("nextPO keys: " + t);
-                String idl = nextPO.getString(t);
-                if(idl == null) continue; // This shouldn't happen as we just fetched the available keys.
-                Optional<String> idlOpt = idl.isEmpty() ? Optional.empty() : Optional.of(idl);
+            log.logToOutput("nextPO keys: " + canisterCacheInfoPO.childObjectKeys());
+            for(String type: canisterCacheInfoPO.childObjectKeys()){
+                PersistedObject canisterInterfacePO = canisterCacheInfoPO.getChildObject(type);
+                if(canisterInterfacePO == null) continue; // This shouldn't happen as we just fetched the available keys.
+                String idl = canisterInterfacePO.getString("IDL");
+                Optional<String> idlOpt = idl == null || idl.isEmpty() ? Optional.empty() : Optional.of(idl);
                 try {
-                    info.putCanisterInterface(idlOpt, InterfaceType.valueOf(t));
+                    info.putCanisterInterface(idlOpt, InterfaceType.valueOf(type));
                 } catch (Exception e){
                     log.logToError("Canister interface type could not be deserialized to enum. The IDL was not restored properly for canister: " + cid);
                 }
             }
             cache.synchronous().put(cid, info);
-
         }
-
         return cache;
     }
 
@@ -110,25 +107,30 @@ public class DataPersister {
                     |   Key = CID
                     |
             CanisterCacheInfo (PersistedObject): Each such persisted object will have the activeCanisterInterfaceType serialized to a String.
-                    |
+                    |                            The key for activeCanisterInterfaceType is "ActiveCanisterInterfaceType".
                     |   Key = InterfaceType.toString()
                     |
-            CanisterInterface (String): This is a String per InterfaceType where the key is the serialized InterfaceType and the value is the IDL content.
-                                        Possibly this also becomes a PersistedObject in the future if the CanisterInterface gets more attributes.
+            CanisterInterface (PersistedObject)
+                    |
+                    |   Key = "IDL"
+                    |
+                   IDL (String): This is the IDL content.
         */
 
         log.logToOutput("Storing IDLs to Burp project file.");
         PersistedObject canisterInterfaceCachePO = generatePOTree(rootPO);
 
-        for(Map.Entry<String, CanisterCacheInfo> entry : cache.synchronous().asMap().entrySet()){
-            PersistedObject nextPO = PersistedObject.persistedObject();
-            CanisterCacheInfo info = entry.getValue();
-            nextPO.setString("ActiveCanisterInterfaceType", info.getActiveCanisterInterfaceType().name());
+        for(Map.Entry<String, CanisterCacheInfo> cacheEntry : cache.synchronous().asMap().entrySet()){
+            PersistedObject canisterCacheInfoPO = PersistedObject.persistedObject();
+            CanisterCacheInfo info = cacheEntry.getValue();
+            canisterCacheInfoPO.setString("ActiveCanisterInterfaceType", info.getActiveCanisterInterfaceType().name());
 
-            for(Map.Entry<InterfaceType, Optional<String>> i : info.getCanisterInterfaces().entrySet()){
-                nextPO.setString(i.getKey().name(), i.getValue().orElse(""));
+            for(Map.Entry<InterfaceType, Optional<String>> canisterInterface : info.getCanisterInterfaces().entrySet()){
+                PersistedObject canisterInterfacePO = PersistedObject.persistedObject();
+                canisterInterfacePO.setString("IDL", canisterInterface.getValue().orElse(""));
+                canisterCacheInfoPO.setChildObject(canisterInterface.getKey().name(), canisterInterfacePO);
             }
-            canisterInterfaceCachePO.setChildObject(entry.getKey(), nextPO);
+            canisterInterfaceCachePO.setChildObject(cacheEntry.getKey(), canisterCacheInfoPO);
         }
     }
 
