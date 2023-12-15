@@ -9,10 +9,9 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.IcTools;
-import org.dfinity.ic.burp.tools.model.IcToolsException;
-import org.dfinity.ic.burp.tools.model.RequestMetadata;
-import org.dfinity.ic.burp.tools.model.RequestType;
+import org.dfinity.ic.burp.tools.model.*;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -83,5 +82,15 @@ public class IcCacheRefresh implements HttpHandler {
             this.canisterId = canisterId;
             this.requestType = requestType;
         }
+    }
+
+    public void refreshAllInterfaceCacheEntries() throws IcToolsException {
+        for(Map.Entry<String, CanisterCacheInfo> entry : canisterInterfaceCache.synchronous().asMap().entrySet()){
+            String cid = entry.getKey();
+            Optional<String> idl = icTools.discoverCanisterInterface(cid);
+            CanisterCacheInfo info = entry.getValue();
+            // TODO check whether we need to put the info object back into the canisterInterfaceCache or if this is updated by reference.
+            info.putCanisterInterface(idl, InterfaceType.AUTOMATIC);
+        };
     }
 }
