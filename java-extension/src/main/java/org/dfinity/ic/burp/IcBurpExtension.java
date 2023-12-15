@@ -2,6 +2,7 @@ package org.dfinity.ic.burp;
 
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.extension.ExtensionUnloadingHandler;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -41,6 +42,11 @@ public class IcBurpExtension implements BurpExtension {
 
         api.userInterface().registerSuiteTab("IC", tp);
 
+        // Register a HTTP handler that intercepts all requests to update the interface cache.
         api.http().registerHttpHandler(new IcCacheRefresh(api.logging(), icTools, canisterInterfaceCache, callRequestCache, Optional.empty(), Optional.empty()));
+
+        // Add a handler that stores the IDLs to Burp persistent storage (Burp project file) before unloading the extension.
+        // This effectively stores the data before shutting down Burp if trigger normally.
+        api.extension().registerUnloadingHandler(() -> dataPersister.storeCanisterInterfaceCache(canisterInterfaceCache));
     }
 }

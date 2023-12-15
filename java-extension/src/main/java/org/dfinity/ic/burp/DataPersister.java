@@ -92,7 +92,7 @@ public class DataPersister {
         return cache;
     }
 
-    public void storeCanisterInterfaceCache(AsyncLoadingCache<String, CanisterCacheInfo> cache){
+    public boolean storeCanisterInterfaceCache(AsyncLoadingCache<String, CanisterCacheInfo> cache){
         /* The strategy is to create a new PersistedObject.
             Overall, the data structure looks like a tree:
 
@@ -132,6 +132,7 @@ public class DataPersister {
             }
             canisterInterfaceCachePO.setChildObject(cacheEntry.getKey(), canisterCacheInfoPO);
         }
+        return true;
     }
 
     private PersistedObject generatePOTree(PersistedObject root){

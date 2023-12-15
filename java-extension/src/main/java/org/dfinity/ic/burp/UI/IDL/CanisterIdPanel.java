@@ -26,7 +26,11 @@ public class CanisterIdPanel extends JPanel {
         this.canisterInterfaceCache = canisterInterfaceCache;
         this.idlManagementPanel = idlManagementPanel;
 
-        this.add(new ICButton(log, "Store IDLs", e -> DataPersister.getInstance().storeCanisterInterfaceCache(canisterInterfaceCache)));
+        this.add(new ICButton(log, "Store IDLs to project file", e -> {
+            if(DataPersister.getInstance().storeCanisterInterfaceCache(canisterInterfaceCache)) {
+                JOptionPane.showMessageDialog(this, "Data stored successfully", "Data stored successfully", JOptionPane.INFORMATION_MESSAGE);
+            }
+        }));
 
         canisterIdTable = new JTable(new CanisterIdTableModel(log, canisterInterfaceCache));
         canisterIdTable.setTableHeader(null);
