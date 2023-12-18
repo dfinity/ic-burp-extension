@@ -18,14 +18,9 @@ public class DataPersister {
     private JnaIcTools icTools;
     private Logging log;
     private CacheLoaderSubscriber cacheLoaderSubscriber;
-    private static final DataPersister instance = new DataPersister();
 
 
-    public static DataPersister getInstance(){
-        return instance;
-    }
-
-    public void init(Logging log, JnaIcTools icTools, PersistedObject rootPO, CacheLoaderSubscriber cacheLoaderSubscriber) {
+    public DataPersister(Logging log, JnaIcTools icTools, PersistedObject rootPO, CacheLoaderSubscriber cacheLoaderSubscriber) {
         this.rootPO = rootPO;
         this.log = log;
         this.icTools = icTools;

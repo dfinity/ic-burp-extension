@@ -83,14 +83,4 @@ public class IcCacheRefresh implements HttpHandler {
             this.requestType = requestType;
         }
     }
-
-    public void refreshAllInterfaceCacheEntries() throws IcToolsException {
-        for(Map.Entry<String, CanisterCacheInfo> entry : canisterInterfaceCache.synchronous().asMap().entrySet()){
-            String cid = entry.getKey();
-            Optional<String> idl = icTools.discoverCanisterInterface(cid);
-            CanisterCacheInfo info = entry.getValue();
-            // TODO check whether we need to put the info object back into the canisterInterfaceCache or if this is updated by reference.
-            info.putCanisterInterface(idl, InterfaceType.AUTOMATIC);
-        };
-    }
 }

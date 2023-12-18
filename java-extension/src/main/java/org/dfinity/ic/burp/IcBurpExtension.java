@@ -27,8 +27,7 @@ public class IcBurpExtension implements BurpExtension {
         var icTools = new JnaIcTools();
 
         CacheLoaderSubscriber l = new CacheLoaderSubscriber();
-        DataPersister dataPersister = DataPersister.getInstance();
-        dataPersister.init(api.logging(), icTools, api.persistence().extensionData(), l);
+        DataPersister dataPersister = new DataPersister(api.logging(), icTools, api.persistence().extensionData(), l);
         canisterInterfaceCache = dataPersister.getCanisterInterfaceCache();
 
         Cache<String, RequestMetadata> callRequestCache = Caffeine.newBuilder().maximumSize(10_000).build();
@@ -37,12 +36,13 @@ public class IcBurpExtension implements BurpExtension {
         api.userInterface().registerHttpResponseEditorProvider(viewerProvider);
 
         // Create top level UI component and have the loader delegate notifications to it to update the UI accordingly.
-        TopPanel tp = new TopPanel(api.logging(), canisterInterfaceCache);
+        ICController controller = new ICController(api.logging(), canisterInterfaceCache, dataPersister, icTools);
+        TopPanel tp = new TopPanel(api.logging(), canisterInterfaceCache, controller);
         l.setDelegate(tp);
 
         api.userInterface().registerSuiteTab("IC", tp);
 
-        // Register a HTTP handler that intercepts all requests to update the interface cache.
+        // Register an HTTP handler that intercepts all requests to update the interface cache.
         api.http().registerHttpHandler(new IcCacheRefresh(api.logging(), icTools, canisterInterfaceCache, callRequestCache, Optional.empty(), Optional.empty()));
 
         // Add a handler that stores the IDLs to Burp persistent storage (Burp project file) before unloading the extension.

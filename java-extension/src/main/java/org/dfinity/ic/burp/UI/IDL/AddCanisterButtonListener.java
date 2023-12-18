@@ -29,6 +29,11 @@ public class AddCanisterButtonListener implements ActionListener {
                     "Format error", JOptionPane.ERROR_MESSAGE);
             return;
         }
+        if(this.canisterInterfaceCache.getIfPresent(cid) != null){
+            JOptionPane.showMessageDialog(idlManagementPanel, "Canister already exists", "Canister already exists", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
         this.canisterInterfaceCache.get(cid);
         idlManagementPanel.onCacheLoad();
         idlManagementPanel.reloadIdlFromSelection();

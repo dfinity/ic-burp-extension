@@ -42,5 +42,4 @@ public class CanisterCacheInfo {
         return this.canisterInterfaces;
     }
 
-
 }

@@ -2,6 +2,7 @@ package org.dfinity.ic.burp.UI.Identity;
 
 import burp.api.montoya.logging.Logging;
 import com.nimbusds.jose.JOSEException;
+import org.dfinity.ic.burp.ICController;
 import org.dfinity.ic.burp.model.JWKIdentity;
 
 import javax.swing.*;
@@ -12,7 +13,7 @@ public class IdentityMgmtPanel extends JPanel {
     private final JTextArea script;
     private final JTextArea instructions;
 
-    public IdentityMgmtPanel(Logging log) {
+    public IdentityMgmtPanel(Logging log, ICController controller) {
         this.log = log;
 
         this.instructions = new JTextArea();

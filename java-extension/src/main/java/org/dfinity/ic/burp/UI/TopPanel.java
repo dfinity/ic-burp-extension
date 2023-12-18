@@ -2,24 +2,23 @@ package org.dfinity.ic.burp.UI;
 
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import org.dfinity.ic.burp.DataPersister;
+import org.dfinity.ic.burp.ICController;
 import org.dfinity.ic.burp.UI.IDL.IDLManagementPanel;
 import org.dfinity.ic.burp.UI.Identity.IdentityMgmtPanel;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class TopPanel extends JTabbedPane {
     private final IDLManagementPanel idlManagementPanel;
     private final IdentityMgmtPanel identityMgmtPanel;
     private final Logging log;
+    private final ICController controller;
 
-    public TopPanel(Logging log, AsyncLoadingCache<String, CanisterCacheInfo>  canisterInterfaceCache) {
-
-        this.idlManagementPanel = new IDLManagementPanel(log, canisterInterfaceCache);
-        this.identityMgmtPanel = new IdentityMgmtPanel(log);
+    public TopPanel(Logging log, AsyncLoadingCache<String, CanisterCacheInfo>  canisterInterfaceCache, ICController controller) {
+        this.controller = controller;
+        this.idlManagementPanel = new IDLManagementPanel(log, controller, canisterInterfaceCache);
+        this.identityMgmtPanel = new IdentityMgmtPanel(log, controller);
         this.log = log;
         this.add("IC IDL Management", idlManagementPanel);
         this.add("IC Identity Management", identityMgmtPanel);

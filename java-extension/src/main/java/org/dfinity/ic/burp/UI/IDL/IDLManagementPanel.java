@@ -2,14 +2,11 @@ package org.dfinity.ic.burp.UI.IDL;
 
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import org.dfinity.ic.burp.DataPersister;
-import org.dfinity.ic.burp.UI.ICButton;
+import org.dfinity.ic.burp.ICController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
 
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.Optional;
 
 public class IDLManagementPanel extends JSplitPane {
@@ -18,14 +15,14 @@ public class IDLManagementPanel extends JSplitPane {
     private final Logging log;
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
 
-    public IDLManagementPanel(Logging log, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache) {
+    public IDLManagementPanel(Logging log, ICController controller, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache) {
         super(JSplitPane.HORIZONTAL_SPLIT);
 
         this.log = log;
         this.canisterInterfaceCache = canisterInterfaceCache;
 
-        this.canisterIDPanel = new CanisterIdPanel(log, canisterInterfaceCache, this);
-        this.idlPanel = new IDLPanel(log, canisterInterfaceCache, this);
+        this.canisterIDPanel = new CanisterIdPanel(log, controller, canisterInterfaceCache, this);
+        this.idlPanel = new IDLPanel(log, controller, canisterInterfaceCache, this);
 
         this.add(this.canisterIDPanel);
         this.add(this.idlPanel);
