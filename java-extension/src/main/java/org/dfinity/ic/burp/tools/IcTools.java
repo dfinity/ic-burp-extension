@@ -7,7 +7,7 @@ import org.dfinity.ic.burp.tools.model.RequestMetadata;
 
 import java.util.Optional;
 
-
+// TODO: delete me
 public interface IcTools {
     /**
      * Tries to automatically discover the canister CANDID interface by making calls to the IC.
