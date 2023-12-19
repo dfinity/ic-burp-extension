@@ -2,6 +2,7 @@ package org.dfinity.ic.burp.tools;
 
 import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
+import org.dfinity.ic.burp.tools.model.Identity;
 import org.dfinity.ic.burp.tools.model.RequestInfo;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
 
@@ -46,4 +47,15 @@ public interface IcTools {
      * @throws IcToolsException if decoding fails
      */
     String decodeCanisterResponse(byte[] encodedCborResponse, Optional<CanisterInterfaceInfo> canisterInterfaceInfo) throws IcToolsException;
+
+    /**
+     * CBOR-encodes a request body and signs it using the provided identity.
+     *
+     * @param decodedRequest    the decoded request, as returned by {@link #decodeCanisterRequest(byte[], Optional)}
+     * @param canisterInterface the canister CANDID interface (contents of the DID file), if known, if this is omitted CANDID types are guessed and the IC might reject the crafted message
+     * @param signIdentity      the identity that should be used to sign the request
+     * @return the CBOR encoded and signed request
+     * @throws IcToolsException if an error occurs during encoding or signing
+     */
+    byte[] encodeAndSignCanisterRequest(String decodedRequest, Optional<String> canisterInterface, Identity signIdentity) throws IcToolsException;
 }

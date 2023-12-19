@@ -5,5 +5,6 @@ import java.util.Optional;
 /**
  * @param canisterMethod not available for /read_state endpoints
  */
-public record RequestMetadata(RequestType type, String requestId, Optional<String> canisterMethod) {
+public record RequestMetadata(RequestType type, String requestId, RequestSenderInfo senderInfo,
+                              Optional<String> canisterMethod) {
 }

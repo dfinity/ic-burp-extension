@@ -15,7 +15,9 @@ import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
+import org.dfinity.ic.burp.tools.model.Principal;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
+import org.dfinity.ic.burp.tools.model.RequestSenderInfo;
 import org.dfinity.ic.burp.tools.model.RequestType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,7 +40,7 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class IcCacheRefreshTest {
 
-    private static final RequestMetadata META_DATA = new RequestMetadata(RequestType.CALL, "request_id", Optional.of("canister_method"));
+    private static final RequestMetadata META_DATA = new RequestMetadata(RequestType.CALL, "request_id", new RequestSenderInfo(new Principal("2vxsx-fae"), Optional.empty(), Optional.empty(), List.of()), Optional.of("canister_method"));
     private final byte[] BODY_BYTES = new byte[]{0, 1, 2, 3};
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache = Caffeine.newBuilder().buildAsync(a -> new CanisterCacheInfo(Optional.of(a), InterfaceType.AUTOMATIC));
     private final Cache<String, RequestMetadata> callRequestCache = Caffeine.newBuilder().build();
