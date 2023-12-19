@@ -2,9 +2,9 @@ package org.dfinity.ic.burp.UI;
 
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import org.dfinity.ic.burp.ICController;
 import org.dfinity.ic.burp.UI.IDL.IDLManagementPanel;
 import org.dfinity.ic.burp.UI.Identity.IdentityMgmtPanel;
+import org.dfinity.ic.burp.controller.ICController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 
 import javax.swing.*;
@@ -18,7 +18,7 @@ public class TopPanel extends JTabbedPane {
     public TopPanel(Logging log, AsyncLoadingCache<String, CanisterCacheInfo>  canisterInterfaceCache, ICController controller) {
         this.controller = controller;
         this.idlManagementPanel = new IDLManagementPanel(log, controller, canisterInterfaceCache);
-        this.identityMgmtPanel = new IdentityMgmtPanel(log, controller);
+        this.identityMgmtPanel = new IdentityMgmtPanel(log);
         this.log = log;
         this.add("IC IDL Management", idlManagementPanel);
         this.add("IC Identity Management", identityMgmtPanel);
@@ -29,5 +29,21 @@ public class TopPanel extends JTabbedPane {
     */
     public void onCacheLoad() {
         idlManagementPanel.onCacheLoad();
+    }
+
+    public void reloadIdlFromSelection() {
+        idlManagementPanel.reloadIdlFromSelection();
+    }
+
+    public void setIDLContent(String idl){
+        idlManagementPanel.setIDLContent(idl);
+    }
+
+    public void showIdlPanel() {
+        idlManagementPanel.showIdlPanel();
+    }
+
+    public void reloadIDLTable() {
+        idlManagementPanel.reloadIDLTable();
     }
 }

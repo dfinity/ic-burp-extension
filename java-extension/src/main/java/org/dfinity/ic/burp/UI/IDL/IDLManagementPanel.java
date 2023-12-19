@@ -2,7 +2,7 @@ package org.dfinity.ic.burp.UI.IDL;
 
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import org.dfinity.ic.burp.ICController;
+import org.dfinity.ic.burp.controller.ICController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
 
@@ -53,8 +53,12 @@ public class IDLManagementPanel extends JSplitPane {
         log.logToOutput("Type selected in IDL table: " + t);
         String idl;
 
-        idl = t.map(interfaceType -> canisterInterfaceCache.synchronous().get(val.get()).getCanisterInterface(interfaceType).orElse("NOT FOUND")).orElse("NOT FOUND");
+        idl = t.map(interfaceType -> canisterInterfaceCache.synchronous().get(val.get()).getCanisterInterface(interfaceType)).orElse("NOT FOUND");
 
+        idlPanel.setIDLContent(idl);
+    }
+
+    public void setIDLContent(String idl){
         idlPanel.setIDLContent(idl);
     }
 
@@ -69,5 +73,10 @@ public class IDLManagementPanel extends JSplitPane {
     public void reloadIDLTable(){
         log.logToOutput("IDLManagementPanel.reloadIDLTable");
         idlPanel.reloadIDLTable();
+    }
+
+    public void showIdlPanel() {
+        idlPanel.setVisible(true);
+        this.setDividerLocation(250);
     }
 }

@@ -1,6 +1,6 @@
 package org.dfinity.ic.burp.UI.IDL;
 
-import org.dfinity.ic.burp.ICController;
+import org.dfinity.ic.burp.controller.ICController;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;

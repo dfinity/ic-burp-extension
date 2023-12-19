@@ -38,12 +38,13 @@ public class DataPersister {
                         log.logToOutput("Resolving canister interface for: " + cid);
                         CanisterCacheInfo val;
                         try {
-                            Optional<String> idl = icTools.discoverCanisterInterface(cid);
-                            InterfaceType t = idl.isPresent() ? InterfaceType.AUTOMATIC : InterfaceType.FAILED;
+                            Optional<String> idlOpt = icTools.discoverCanisterInterface(cid);
+                            InterfaceType t = idlOpt.isPresent() ? InterfaceType.AUTOMATIC : InterfaceType.FAILED;
+                            String idl = idlOpt.orElse("FAILED");
                             val = new CanisterCacheInfo(idl, t);
                         } catch (IcToolsException e) {
                             log.logToError(String.format("discoverCanisterInterface failed for canisterId %s", cid), e);
-                            val = new CanisterCacheInfo(Optional.empty(), InterfaceType.FAILED);
+                            val = new CanisterCacheInfo("FAILED", InterfaceType.FAILED);
                         }
                         cacheLoaderSubscriber.onCacheLoad();
                         return val;
@@ -75,9 +76,9 @@ public class DataPersister {
                 PersistedObject canisterInterfacePO = canisterCacheInfoPO.getChildObject(type);
                 if(canisterInterfacePO == null) continue; // This shouldn't happen as we just fetched the available keys.
                 String idl = canisterInterfacePO.getString("IDL");
-                Optional<String> idlOpt = idl == null || idl.isEmpty() ? Optional.empty() : Optional.of(idl);
+                idl = idl == null  ? "" : idl;
                 try {
-                    info.putCanisterInterface(idlOpt, InterfaceType.valueOf(type));
+                    info.putCanisterInterface(idl, InterfaceType.valueOf(type));
                 } catch (Exception e){
                     log.logToError("Canister interface type could not be deserialized to enum. The IDL was not restored properly for canister: " + cid);
                 }
@@ -120,13 +121,19 @@ public class DataPersister {
             CanisterCacheInfo info = cacheEntry.getValue();
             canisterCacheInfoPO.setString("ActiveCanisterInterfaceType", info.getActiveCanisterInterfaceType().name());
 
-            for(Map.Entry<InterfaceType, Optional<String>> canisterInterface : info.getCanisterInterfaces().entrySet()){
+            for(Map.Entry<InterfaceType, String> canisterInterface : info.getCanisterInterfaces().entrySet()){
                 PersistedObject canisterInterfacePO = PersistedObject.persistedObject();
-                canisterInterfacePO.setString("IDL", canisterInterface.getValue().orElse(""));
+                canisterInterfacePO.setString("IDL", canisterInterface.getValue());
                 canisterCacheInfoPO.setChildObject(canisterInterface.getKey().name(), canisterInterfacePO);
             }
             canisterInterfaceCachePO.setChildObject(cacheEntry.getKey(), canisterCacheInfoPO);
         }
+        return true;
+    }
+
+    public boolean clearCanisterInterfaceCache(){
+        PersistedObject icPO = PersistedObject.persistedObject();
+        this.rootPO.setChildObject("IC", icPO);
         return true;
     }
 

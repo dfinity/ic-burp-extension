@@ -2,9 +2,8 @@ package org.dfinity.ic.burp.UI.IDL;
 
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import org.dfinity.ic.burp.DataPersister;
-import org.dfinity.ic.burp.ICController;
 import org.dfinity.ic.burp.UI.ICButton;
+import org.dfinity.ic.burp.controller.ICController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 
 import javax.swing.*;
@@ -28,6 +27,15 @@ public class CanisterIdPanel extends JPanel {
         this.add(new ICButton(log, "Store IDLs to project file", e -> {
             if(controller.storeCanisterInterfaceCache()){
                 JOptionPane.showMessageDialog(this, "Data stored successfully", "Data stored successfully", JOptionPane.INFORMATION_MESSAGE);
+            }
+        }));
+
+        this.add(Box.createRigidArea(new Dimension(0, 5)));
+
+        // This button is probably no longer required in production.
+        this.add(new ICButton(log, "Clear project data", e -> {
+            if(controller.clearCanisterInterfaceCache()){
+                JOptionPane.showMessageDialog(this, "Data cleared successfully", "Data cleared successfully", JOptionPane.INFORMATION_MESSAGE);
             }
         }));
 

@@ -76,7 +76,7 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
 
             var cid = getCanisterId(requestResponse.request().path()).orElseThrow(() -> new RuntimeException("canister id not present in " + requestResponse.request()));
             canisterInterfaceCache.get(cid).thenAccept(canisterCacheInfo -> {
-                Optional<String> canisterInterface = canisterCacheInfo == null ? Optional.empty() : canisterCacheInfo.getActiveCanisterInterface();
+                Optional<String> canisterInterface = canisterCacheInfo == null ? Optional.empty() : Optional.of(canisterCacheInfo.getActiveCanisterInterface());
                 String content;
                 if (isRequest) {
                     try {

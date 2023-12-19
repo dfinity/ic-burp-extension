@@ -1,7 +1,9 @@
-package org.dfinity.ic.burp;
+package org.dfinity.ic.burp.controller;
 
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import org.dfinity.ic.burp.DataPersister;
+import org.dfinity.ic.burp.UI.TopPanel;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.jna.JnaIcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
@@ -15,6 +17,7 @@ public class ICController {
     private final DataPersister dataPersister;
     private final Logging log;
     private final JnaIcTools icTools;
+    private TopPanel topPanel;
     private Optional<String> selectedCID;
     private Optional<InterfaceType> selectedType;
 
@@ -29,11 +32,16 @@ public class ICController {
         return dataPersister.storeCanisterInterfaceCache(canisterInterfaceCache);
     }
 
+    public boolean clearCanisterInterfaceCache() {
+        return dataPersister.clearCanisterInterfaceCache();
+    }
+
     public boolean refreshAllInterfaceCacheEntries() {
         for(Map.Entry<String, CanisterCacheInfo> entry : canisterInterfaceCache.synchronous().asMap().entrySet()){
             String cid = entry.getKey();
             try {
-                Optional<String> idl = icTools.discoverCanisterInterface(cid);
+                Optional<String> idlOpt = icTools.discoverCanisterInterface(cid);
+                String idl = idlOpt.orElse("");
                 CanisterCacheInfo info = entry.getValue();
                 info.putCanisterInterface(idl, InterfaceType.AUTOMATIC);
             } catch (IcToolsException e) {
@@ -46,11 +54,12 @@ public class ICController {
 
     public boolean refreshInterfaceCacheEntries(String cid) {
         try {
-            Optional<String> idl = icTools.discoverCanisterInterface(cid);
+            Optional<String> idlOpt = icTools.discoverCanisterInterface(cid);
             CanisterCacheInfo info = canisterInterfaceCache.get(cid).join();
             if(info == null) {
                 return false;
             }
+            String idl = idlOpt.orElse("");
             info.putCanisterInterface(idl, InterfaceType.AUTOMATIC);
         } catch (IcToolsException e) {
             log.logToError("Could not refresh IDLs with exception: + \n" + e);
@@ -60,21 +69,53 @@ public class ICController {
     }
 
     public boolean updateSelectedIDL(String idl){
+        log.logToOutput("Updating IDL for CID: " + selectedCID + " and type: " + selectedType);
         if(selectedCID.isEmpty() || selectedType.isEmpty()){
             return false;
         }
         CanisterCacheInfo info = canisterInterfaceCache.get(selectedCID.get()).join();
-        info.putCanisterInterface(Optional.of(idl), selectedType.get());
+        info.putCanisterInterface(idl, selectedType.get());
         return true;
     }
 
     public void setSelectedCID(Optional<String> cid) {
+        log.logToOutput("ICController.setSelectedCID");
+
         this.selectedCID = cid;
-        // TODO trigger update of the IDL text area and the IDL Table.
-        // Basically move reloadIdlFromSelection and reloadIDLTable here.
+
+        if (cid.isEmpty()) {
+            return;
+        } else {
+            log.logToOutput("Set IDL Panel to visible");
+            topPanel.showIdlPanel();
+        }
+
+        // Since a change in CID also unsets the type selection in the UI, we set this value to empty.
+        setSelectedType(Optional.empty());
+        topPanel.reloadIDLTable();
     }
 
     public void setSelectedType(Optional<InterfaceType> type){
+        log.logToOutput("ICController.setSelectedType");
         this.selectedType = type;
+        reloadIDLContent();
+    }
+
+    public void reloadIDLContent(){
+        log.logToOutput("ICController.reloadIDLContent");
+
+        if(selectedCID.isEmpty() || selectedType.isEmpty()){
+            this.topPanel.setIDLContent("Select a canister and interface type.");
+            return;
+        }
+
+        CanisterCacheInfo info = canisterInterfaceCache.get(selectedCID.get()).join();
+        String idl = info.getCanisterInterface(selectedType.get());
+
+        this.topPanel.setIDLContent(idl);
+    }
+
+    public void setTopPanel(TopPanel tp) {
+        this.topPanel = tp;
     }
 }

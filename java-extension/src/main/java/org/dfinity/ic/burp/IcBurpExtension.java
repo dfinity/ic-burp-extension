@@ -2,16 +2,14 @@ package org.dfinity.ic.burp;
 
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.extension.ExtensionUnloadingHandler;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dfinity.ic.burp.UI.CacheLoaderSubscriber;
 import org.dfinity.ic.burp.UI.TopPanel;
+import org.dfinity.ic.burp.controller.ICController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.jna.JnaIcTools;
-import org.dfinity.ic.burp.tools.model.IcToolsException;
-import org.dfinity.ic.burp.tools.model.InterfaceType;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
 
 import java.util.Optional;
@@ -39,6 +37,7 @@ public class IcBurpExtension implements BurpExtension {
         ICController controller = new ICController(api.logging(), canisterInterfaceCache, dataPersister, icTools);
         TopPanel tp = new TopPanel(api.logging(), canisterInterfaceCache, controller);
         l.setDelegate(tp);
+        controller.setTopPanel(tp);
 
         api.userInterface().registerSuiteTab("IC", tp);
 

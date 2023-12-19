@@ -2,8 +2,8 @@ package org.dfinity.ic.burp.UI.IDL;
 
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import org.dfinity.ic.burp.ICController;
 import org.dfinity.ic.burp.UI.ICButton;
+import org.dfinity.ic.burp.controller.ICController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
 
@@ -106,6 +106,5 @@ public class IDLPanel extends JPanel{
         log.logToOutput("IDLPanel.reloadIDLTable");
         AbstractTableModel m = (AbstractTableModel) idlTable.getModel();
         m.fireTableDataChanged();
-        setIDLContent("");
     }
 }

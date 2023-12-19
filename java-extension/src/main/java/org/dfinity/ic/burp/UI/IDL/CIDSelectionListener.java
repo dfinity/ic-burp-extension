@@ -1,13 +1,12 @@
 package org.dfinity.ic.burp.UI.IDL;
 
 import burp.api.montoya.logging.Logging;
-import org.dfinity.ic.burp.ICController;
+import org.dfinity.ic.burp.controller.ICController;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-
-import static javax.swing.ListSelectionModel.SINGLE_SELECTION;
+import java.util.Optional;
 
 public class CIDSelectionListener implements ListSelectionListener {
     private final Logging log;
@@ -22,14 +21,11 @@ public class CIDSelectionListener implements ListSelectionListener {
 
     @Override
     public void valueChanged(ListSelectionEvent e) {
-        if(e.getValueIsAdjusting() || !(e.getSource() instanceof DefaultListSelectionModel)) return;
-
-        //DefaultListSelectionModel selectionModel = (DefaultListSelectionModel) e.getSource();
-        //icController.setSelectedCID(selectionModel.getAnchorSelectionIndex());
-
+        if(e.getValueIsAdjusting() || !(e.getSource() instanceof DefaultListSelectionModel)) {
+            icController.setSelectedCID(Optional.empty());
+            return;
+        };
+        log.logToOutput("CIDSelectionListener.valueChanged: setSelectedCID to idlManagementPanel.getSelectedCID()");
         icController.setSelectedCID(idlManagementPanel.getSelectedCID());
-
-        idlManagementPanel.reloadIdlFromSelection();
-        idlManagementPanel.reloadIDLTable();
     }
 }

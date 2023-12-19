@@ -9,9 +9,10 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.IcTools;
-import org.dfinity.ic.burp.tools.model.*;
+import org.dfinity.ic.burp.tools.model.IcToolsException;
+import org.dfinity.ic.burp.tools.model.RequestMetadata;
+import org.dfinity.ic.burp.tools.model.RequestType;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -47,7 +48,6 @@ public class IcCacheRefresh implements HttpHandler {
 
     @Override
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent requestToBeSent) {
-        log.logToOutput("IcCacheRefresh.handleHttpRequestToBeSent");
         try {
             var urlInfo = getUrlInfo(requestToBeSent.path());
             if (urlInfo.isPresent()) {
@@ -70,7 +70,6 @@ public class IcCacheRefresh implements HttpHandler {
 
     @Override
     public ResponseReceivedAction handleHttpResponseReceived(HttpResponseReceived responseReceived) {
-        log.logToOutput("IcCacheRefresh.handleHttpResponseReceived");
         return continueWithResponse.apply(responseReceived);
     }
 
