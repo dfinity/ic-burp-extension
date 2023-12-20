@@ -48,7 +48,7 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
         requestEditor = api.userInterface().createRawEditor(EditorOptions.READ_ONLY);
     }
 
-    private static Optional<String> getCanisterId(String path) {
+    public static Optional<String> getCanisterId(String path) {
         var matcher = IC_API_PATH_REGEX.matcher(path);
         if (matcher.matches()) {
             return Optional.ofNullable(matcher.group("cid"));
@@ -58,20 +58,17 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
 
     @Override
     public HttpRequest getRequest() {
-        log.logToOutput("IcHttpRequestResponseViewer.getRequest");
         return requestResponse.request();
     }
 
     @Override
     public HttpResponse getResponse() {
-        log.logToOutput("IcHttpRequestResponseViewer.getResponse");
         return requestResponse.response();
     }
 
     @Override
     public void setRequestResponse(HttpRequestResponse requestResponse) {
         try {
-            log.logToOutput("IcHttpRequestResponseViewer.IcHttpRequestResponseViewer");
             this.requestResponse = requestResponse;
 
             var cid = getCanisterId(requestResponse.request().path()).orElseThrow(() -> new RuntimeException("canister id not present in " + requestResponse.request()));
@@ -116,7 +113,6 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
 
     @Override
     public boolean isEnabledFor(HttpRequestResponse requestResponse) {
-        log.logToOutput("IcHttpRequestResponseViewer.isEnabledFor");
         try {
             if (requestResponse.request() == null || (!isRequest && !requestResponse.hasResponse()))
                 return false;
@@ -144,25 +140,21 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
 
     @Override
     public String caption() {
-        log.logToOutput("IcHttpRequestResponseViewer.caption");
         return isRequest ? "IC Request" : "IC Response";
     }
 
     @Override
     public Component uiComponent() {
-        log.logToOutput("IcHttpRequestResponseViewer.uiComponent");
         return requestEditor.uiComponent();
     }
 
     @Override
     public Selection selectedData() {
-        log.logToOutput("IcHttpRequestResponseViewer.selectedData");
         return requestEditor.selection().isPresent() ? requestEditor.selection().get() : null;
     }
 
     @Override
     public boolean isModified() {
-        log.logToOutput("IcHttpRequestResponseViewer.isModified");
         return requestEditor.isModified();
     }
 }

@@ -39,7 +39,8 @@ class IcCacheRefreshTest {
 
     private static final RequestMetadata META_DATA = new RequestMetadata(RequestType.CALL, "request_id", Optional.of("canister_method"));
     private final byte[] BODY_BYTES = new byte[]{0, 1, 2, 3};
-    private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache = Caffeine.newBuilder().buildAsync(a -> new CanisterCacheInfo(Optional.of(a), InterfaceType.AUTOMATIC));
+    private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache = Caffeine.newBuilder().buildAsync(
+            a -> new CanisterCacheInfo(a, InterfaceType.AUTOMATIC));
     private final Cache<String, RequestMetadata> callRequestCache = Caffeine.newBuilder().build();
 
     @Mock
@@ -111,7 +112,7 @@ class IcCacheRefreshTest {
         var res = cacheRefresh.handleHttpRequestToBeSent(request);
 
         assertEquals(requestAction, res);
-        assertEquals(new CanisterCacheInfo(Optional.of("4c4fd-caaaa-aaaaq-aaa3a-cai"), InterfaceType.AUTOMATIC).getCanisterInterfaces()
+        assertEquals(new CanisterCacheInfo("4c4fd-caaaa-aaaaq-aaa3a-cai", InterfaceType.AUTOMATIC).getCanisterInterfaces()
                 , canisterInterfaceCache.get("4c4fd-caaaa-aaaaq-aaa3a-cai").join().getCanisterInterfaces());
     }
 

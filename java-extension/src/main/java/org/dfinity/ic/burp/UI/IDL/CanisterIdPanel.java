@@ -18,12 +18,15 @@ public class CanisterIdPanel extends JPanel {
     private final Logging log;
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
     private final IDLManagementPanel idlManagementPanel;
+    private final ICController controller;
 
     public CanisterIdPanel(Logging log, ICController controller, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, IDLManagementPanel idlManagementPanel) {
         this.log = log;
         this.canisterInterfaceCache = canisterInterfaceCache;
         this.idlManagementPanel = idlManagementPanel;
+        this.controller = controller;
 
+        // This button is probably no longer required in production.
         this.add(new ICButton(log, "Store IDLs to project file", e -> {
             if(controller.storeCanisterInterfaceCache()){
                 JOptionPane.showMessageDialog(this, "Data stored successfully", "Data stored successfully", JOptionPane.INFORMATION_MESSAGE);
@@ -104,5 +107,8 @@ public class CanisterIdPanel extends JPanel {
     public void onCacheLoad() {
         AbstractTableModel m = (AbstractTableModel) this.canisterIdTable.getModel();
         m.fireTableDataChanged();
+        // Refreshing the table undoes the CID selection.
+        // Need to update the controller state to reflect this.
+        this.controller.setSelectedCID(Optional.empty());
     }
 }
