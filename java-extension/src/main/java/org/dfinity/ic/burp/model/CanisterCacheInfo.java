@@ -17,7 +17,6 @@ public class CanisterCacheInfo {
 
     public void putCanisterInterface(String canisterInterface, InterfaceType type) {
         this.canisterInterfaces.put(type, canisterInterface);
-        //this.activeCanisterInterfaceType = type;
     }
 
     public String getActiveCanisterInterface(){

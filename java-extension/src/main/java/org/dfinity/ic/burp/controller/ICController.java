@@ -41,9 +41,11 @@ public class ICController {
             String cid = entry.getKey();
             try {
                 Optional<String> idlOpt = icTools.discoverCanisterInterface(cid);
-                String idl = idlOpt.orElse("");
+                if(idlOpt.isEmpty())
+                    continue;
+
                 CanisterCacheInfo info = entry.getValue();
-                info.putCanisterInterface(idl, InterfaceType.AUTOMATIC);
+                info.putCanisterInterface(idlOpt.get(), InterfaceType.AUTOMATIC);
             } catch (IcToolsException e) {
                 log.logToError("Could not refresh IDLs with exception: + \n" + e);
                 return false;
@@ -59,8 +61,10 @@ public class ICController {
             if(info == null) {
                 return false;
             }
-            String idl = idlOpt.orElse("");
-            info.putCanisterInterface(idl, InterfaceType.AUTOMATIC);
+            if(idlOpt.isEmpty())
+                return false;
+            
+            info.putCanisterInterface(idlOpt.get(), InterfaceType.AUTOMATIC);
         } catch (IcToolsException e) {
             log.logToError("Could not refresh IDLs with exception: + \n" + e);
             return false;
