@@ -50,7 +50,8 @@ import static org.mockito.Mockito.when;
 class IcHttpRequestResponseViewerTest {
 
     private final byte[] BODY_BYTES = new byte[]{0, 1, 2, 3};
-    private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache = Caffeine.newBuilder().buildAsync(x -> new CanisterCacheInfo(Optional.of(x), InterfaceType.AUTOMATIC));
+    private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache = Caffeine.newBuilder().buildAsync(
+            x -> new CanisterCacheInfo(x, InterfaceType.AUTOMATIC));
     private final Cache<String, RequestMetadata> callRequestCache = Caffeine.newBuilder().build();
     @Mock
     HttpRequestResponse requestResponse;

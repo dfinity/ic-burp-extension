@@ -48,7 +48,6 @@ public class IcCacheRefresh implements HttpHandler {
 
     @Override
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent requestToBeSent) {
-        log.logToOutput("IcCacheRefresh.handleHttpRequestToBeSent");
         try {
             var urlInfo = getUrlInfo(requestToBeSent.path());
             if (urlInfo.isPresent()) {
@@ -71,7 +70,6 @@ public class IcCacheRefresh implements HttpHandler {
 
     @Override
     public ResponseReceivedAction handleHttpResponseReceived(HttpResponseReceived responseReceived) {
-        log.logToOutput("IcCacheRefresh.handleHttpResponseReceived");
         return continueWithResponse.apply(responseReceived);
     }
 

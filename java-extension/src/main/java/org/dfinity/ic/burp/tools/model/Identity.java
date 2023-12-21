@@ -7,9 +7,6 @@ public class Identity {
     public final IdentityType type;
     public final Optional<String> pem;
     private final Optional<DelegationInfo> delegationInfo;
-    private boolean active;
-    private String label;
-    private String pubKey;
 
     private Identity(IdentityType type, Optional<String> pem, Optional<DelegationInfo> delegationInfo) {
         this.type = type;
@@ -42,10 +39,6 @@ public class Identity {
         // PEM file must contain the private key that corresponds to the public key specified in the last delegation of the delegation chain
         // fromPubKey must be base64nopad encoded public key that signs the first delegation
         return new Identity(IdentityType.DELEGATED, Optional.empty(), Optional.of(new DelegationInfo(secp256k1Identity(pem), fromPubKey, delegationChain)));
-    }
-
-    public boolean isActive() {
-        return active;
     }
 
     public Optional<Identity> delegationTarget() {

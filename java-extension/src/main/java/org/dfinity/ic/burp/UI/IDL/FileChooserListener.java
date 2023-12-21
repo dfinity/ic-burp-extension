@@ -14,7 +14,7 @@ import java.nio.file.Files;
 import java.util.Optional;
 
 
-class FileChooserListener implements ActionListener {
+public class FileChooserListener implements ActionListener {
 
     private final Logging log;
     private final IDLManagementPanel idlManagementPanel;
@@ -53,7 +53,7 @@ class FileChooserListener implements ActionListener {
                     return;
                 }
 
-                canisterInterfaceCache.getIfPresent(cid.get()).get().putCanisterInterface(Optional.ofNullable(idl), InterfaceType.MANUAL);
+                canisterInterfaceCache.getIfPresent(cid.get()).get().putCanisterInterface(idl, InterfaceType.MANUAL);
 
                 idlManagementPanel.reloadIDLTable();
             }
