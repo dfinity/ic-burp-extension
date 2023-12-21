@@ -47,7 +47,7 @@ public class ICController {
                 CanisterCacheInfo info = entry.getValue();
                 info.putCanisterInterface(idlOpt.get(), InterfaceType.AUTOMATIC);
             } catch (IcToolsException e) {
-                log.logToError("Could not refresh IDLs with exception: + \n" + e);
+                log.logToError("Could not refresh IDLs.", e);
                 return false;
             }
         };
@@ -63,10 +63,10 @@ public class ICController {
             }
             if(idlOpt.isEmpty())
                 return false;
-            
+
             info.putCanisterInterface(idlOpt.get(), InterfaceType.AUTOMATIC);
         } catch (IcToolsException e) {
-            log.logToError("Could not refresh IDLs with exception: + \n" + e);
+            log.logToError("Could not refresh IDLs", e);
             return false;
         }
         return true;

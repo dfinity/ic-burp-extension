@@ -50,7 +50,7 @@ public class CanisterIdTableModel extends AbstractTableModel {
             CanisterCacheInfo canisterCacheInfo = syncMap.get(cid);
             isPresent = canisterCacheInfo.getCanisterInterface(InterfaceType.FAILED) == null;
         } catch (Exception e) {
-            log.logToError("Exception raised while fetching the canisterCacheInfo. cid: " + cid);
+            log.logToError("Exception raised while fetching the canisterCacheInfo. cid: " + cid, e);
             isPresent = false;
         }
         return cid + (!isPresent ? " (IDL Not Found)" : "");

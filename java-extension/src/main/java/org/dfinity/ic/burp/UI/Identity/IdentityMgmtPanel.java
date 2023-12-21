@@ -42,7 +42,7 @@ public class IdentityMgmtPanel extends JPanel {
             JWKIdentity id = new JWKIdentity(log);
             script.setText(id.getScript());
         } catch (JOSEException e) {
-            log.logToError("Failed to generate a keypair for the default IC identity.");
+            log.logToError("Failed to generate a keypair for the default IC identity.", e);
         }
 
         script.setAlignmentX(Component.LEFT_ALIGNMENT);

@@ -69,7 +69,7 @@ public class DataPersister {
                 InterfaceType type = InterfaceType.valueOf(canisterCacheInfoPO.getString("ActiveCanisterInterfaceType"));
                 info.setActiveCanisterInterfaceType(type);
             } catch (Exception e){
-                log.logToError("Active canister interface type could not be deserialized to enum.");
+                log.logToError("Active canister interface type could not be deserialized to enum.", e);
             }
             log.logToOutput("nextPO keys: " + canisterCacheInfoPO.childObjectKeys());
             for(String type: canisterCacheInfoPO.childObjectKeys()){
@@ -80,7 +80,7 @@ public class DataPersister {
                 try {
                     info.putCanisterInterface(idl, InterfaceType.valueOf(type));
                 } catch (Exception e){
-                    log.logToError("Canister interface type could not be deserialized to enum. The IDL was not restored properly for canister: " + cid);
+                    log.logToError("Canister interface type could not be deserialized to enum. The IDL was not restored properly for canister: " + cid, e);
                 }
             }
             cache.synchronous().put(cid, info);

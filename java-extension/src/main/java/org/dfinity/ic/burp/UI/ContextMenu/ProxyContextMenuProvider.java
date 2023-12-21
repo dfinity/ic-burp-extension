@@ -76,7 +76,7 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
                 httpRequestList.add(req.withBody(icTools.decodeCanisterRequest(req.body().getBytes(), Optional.of(idl)).decodedRequest()));
 
             } catch (IcToolsException e) {
-                api.logging().logToError("Unable to request metadata for request with URI: " + req.url());
+                api.logging().logToError("Unable to request metadata for request with URI: " + req.url(), e);
             }
         }
 
@@ -84,7 +84,7 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
             // This returns an empty list of menu items.
             return ContextMenuItemsProvider.super.provideMenuItems(event);
 
-        JMenuItem menuItem = new JMenuItem("Send to proxy (IC Decoded)");
+        JMenuItem menuItem = new JMenuItem("Send to repeater (IC Decoded)");
         menuItem.addActionListener(l -> {
 
             for(HttpRequest r : httpRequestList){
