@@ -287,13 +287,16 @@ impl<'de> Deserialize<'de> for PathLabel
 pub enum RequestMetadata {
     Call {
         request_id: Vec<u8>,
+        sender_info: RequestSenderInfo,
         canister_method: String,
     },
     ReadState {
         request_id: Vec<u8>,
+        sender_info: RequestSenderInfo,
     },
     Query {
         request_id: Vec<u8>,
+        sender_info: RequestSenderInfo,
         canister_method: String,
     },
 }
@@ -302,18 +305,37 @@ pub enum RequestMetadata {
 pub enum RequestInfo {
     Call {
         request_id: Vec<u8>,
+        sender_info: RequestSenderInfo,
         decoded_request: String,
         canister_method: String,
     },
     ReadState {
         request_id: Vec<u8>,
+        sender_info: RequestSenderInfo,
         decoded_request: String,
     },
     Query {
         request_id: Vec<u8>,
+        sender_info: RequestSenderInfo,
         decoded_request: String,
         canister_method: String,
     },
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct RequestSenderInfo {
+    pub sender: Principal,
+    pub pubkey: Option<Vec<u8>>,
+    pub sig: Option<Vec<u8>>,
+    pub delegation: Vec<RequestSenderDelegation>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct RequestSenderDelegation {
+    pub pubkey: Vec<u8>,
+    pub expiration: u64,
+    pub targets: Vec<Principal>,
+    pub signature: Vec<u8>,
 }
 
 pub struct CanisterInterfaceInfo {

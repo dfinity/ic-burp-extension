@@ -3,9 +3,12 @@ use std::mem;
 use std::os::raw::c_char;
 use std::ptr::null;
 
+use base64::Engine;
+
 use model::DecodeCanisterRequestResult;
 
 use crate::{canister_lookup, encode};
+use crate::encode::model::RequestSenderDelegation;
 use crate::jna::model::{CanisterInterfaceInfo, DecodeCanisterResponseResult, DiscoverCanisterInterfaceResult, GetRequestMetadataResult};
 
 mod model;
@@ -43,6 +46,27 @@ pub extern fn decode_canister_response(encoded_cbor_response: *const u8, encoded
         })
     };
     encode::decode_canister_response(to_vec(encoded_cbor_response, encoded_cbor_response_size), canister_interface_info).into()
+}
+
+/// Convert a delegation list to a string
+fn delegation_to_string(delegations: Vec<RequestSenderDelegation>) -> String {
+    let mut res = String::new();
+    res.push_str(&*delegations.len().to_string());
+    for del in delegations {
+        res.push_str(";");
+        res.push_str(&*base64::engine::general_purpose::STANDARD_NO_PAD.encode(del.pubkey));
+        res.push_str(":");
+        res.push_str(&*del.expiration.to_string());
+        res.push_str(":");
+        res.push_str(&*del.targets.len().to_string());
+        for t in del.targets {
+            res.push_str(",");
+            res.push_str(&*t.to_text());
+        }
+        res.push_str(":");
+        res.push_str(&*base64::engine::general_purpose::STANDARD_NO_PAD.encode(del.signature));
+    }
+    res
 }
 
 /// Convert a native string to a Rust string
