@@ -3,6 +3,7 @@ package org.dfinity.ic.burp.UI.IDL;
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import org.dfinity.ic.burp.UI.ICButton;
+import org.dfinity.ic.burp.controller.ICController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
 
@@ -18,7 +19,7 @@ public class IDLPanel extends JPanel{
     private final JTextArea idlTextArea;
     private final JTable idlTable;
 
-    public IDLPanel(Logging log, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, IDLManagementPanel idlManagementPanel) {
+    public IDLPanel(Logging log, ICController controller, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, IDLManagementPanel idlManagementPanel) {
         this.log = log;
         JPanel left = new JPanel();
 
@@ -30,7 +31,8 @@ public class IDLPanel extends JPanel{
         left.add(Box.createRigidArea(new Dimension(0, 5)));
 
         idlTable = new JTable(new IDLTableModel(log, canisterInterfaceCache, idlManagementPanel));
-        IDLSelectionListener idlSelectionListener = new IDLSelectionListener(log, idlManagementPanel);
+
+        IDLSelectionListener idlSelectionListener = new IDLSelectionListener(log, idlManagementPanel, controller);
         idlTable.getSelectionModel().addListSelectionListener(idlSelectionListener);
         idlTable.setAlignmentX(Component.LEFT_ALIGNMENT);
         idlTable.setTableHeader(null);
@@ -55,7 +57,7 @@ public class IDLPanel extends JPanel{
 
         JPanel right = new JPanel();
         idlTextArea = new JTextArea("IDL CONTENT");
-        idlTextArea.setEditable(false);
+        idlTextArea.getDocument().addDocumentListener(new IdlTextAreaDocumentListener(controller, idlTextArea));
         JLabel idlContentLabel = new JLabel("IDL Content");
 
         idlContentLabel.setFont(boldFont);

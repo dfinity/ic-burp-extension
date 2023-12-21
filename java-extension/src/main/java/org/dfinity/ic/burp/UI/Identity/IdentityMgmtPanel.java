@@ -25,19 +25,32 @@ public class IdentityMgmtPanel extends JPanel {
         Font f1 = instructions.getFont();
         instructions.setFont(f1.deriveFont(14.0f));
         this.add(instructions);
+        instructions.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        instructions.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.gray),
+                instructions.getBorder()));
+        instructions.setMaximumSize(instructions.getPreferredSize());
+        instructions.setAlignmentX(Component.LEFT_ALIGNMENT);
+
 
         this.add(Box.createRigidArea(new Dimension(0,15)));
 
         this.script = new JTextArea();
-        this.script.setPreferredSize(new Dimension(800,1000));
         this.script.setEditable(false);
 
         try {
             JWKIdentity id = new JWKIdentity(log);
             script.setText(id.getScript());
         } catch (JOSEException e) {
-            log.logToError("Failed to generate a keypair for the default IC identity.");
+            log.logToError("Failed to generate a keypair for the default IC identity.", e);
         }
+
+        script.setAlignmentX(Component.LEFT_ALIGNMENT);
+        script.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        script.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.gray),
+                script.getBorder()));
+        script.setMaximumSize(script.getPreferredSize());
 
         this.add(script);
 
@@ -46,9 +59,5 @@ public class IdentityMgmtPanel extends JPanel {
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         this.setAlignmentX(Component.LEFT_ALIGNMENT);
         this.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-    }
-
-    public void setScript(String content){
-        this.script.setText(content);
     }
 }

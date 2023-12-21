@@ -3,6 +3,7 @@ package org.dfinity.ic.burp.UI.IDL;
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
+import org.dfinity.ic.burp.tools.model.InterfaceType;
 
 import javax.swing.table.AbstractTableModel;
 import java.util.concurrent.ConcurrentMap;
@@ -36,22 +37,20 @@ public class CanisterIdTableModel extends AbstractTableModel {
 
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-        log.logToOutput("CanisterIdTableModel.getValueAt(" + rowIndex + ", " + columnIndex + ")");
         ConcurrentMap<String, CanisterCacheInfo> syncMap = canisterInterfaceCache.synchronous().asMap();
         Object[] keys = syncMap.keySet().toArray();
 
         // Check if rowIndex is in range.
         if(rowIndex >= keys.length) return "";
 
-        String cid = (String) syncMap.keySet().toArray()[rowIndex];
-        log.logToOutput("CanisterIdTableModel cid: " + cid);
+        String cid = (String) syncMap.keySet().stream().sorted().toArray()[rowIndex];
 
         boolean isPresent;
         try {
             CanisterCacheInfo canisterCacheInfo = syncMap.get(cid);
-            isPresent = canisterCacheInfo.getActiveCanisterInterface().isPresent();
+            isPresent = canisterCacheInfo.getCanisterInterface(InterfaceType.FAILED) == null;
         } catch (Exception e) {
-            log.logToError("Exception raised while fetching the canisterCacheInfo. cid: " + cid);
+            log.logToError("Exception raised while fetching the canisterCacheInfo. cid: " + cid, e);
             isPresent = false;
         }
         return cid + (!isPresent ? " (IDL Not Found)" : "");

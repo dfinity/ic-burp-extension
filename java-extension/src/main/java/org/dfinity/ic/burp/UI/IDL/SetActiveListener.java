@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 
-class SetActiveListener implements ActionListener {
+public class SetActiveListener implements ActionListener {
 
     private final Logging log;
     private final IDLManagementPanel idlManagementPanel;

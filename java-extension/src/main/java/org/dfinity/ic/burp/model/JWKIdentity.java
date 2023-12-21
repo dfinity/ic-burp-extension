@@ -6,7 +6,6 @@ import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import org.dfinity.ic.burp.tools.model.Identity;
 
 import java.io.IOException;
 import java.io.InputStream;
