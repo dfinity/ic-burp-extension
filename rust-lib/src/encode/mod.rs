@@ -1,12 +1,15 @@
+use std::sync::Arc;
+
 use candid::{IDLArgs, Principal};
 use candid::utils::CandidSource;
+use ic_agent::Identity;
 use ic_certification::hash_tree::HashTreeNode;
 use ic_transport_types::{ReadStateResponse, RequestIdError, to_request_id};
 use thiserror::Error;
 
 use crate::encode::EncodingError::{CandidConversionFailed, UnexpectedNumberOfRequestIdsFound};
 use crate::encode::MessageType::{REQUEST, RESPONSE};
-use crate::encode::model::{CanisterInterfaceInfo, Envelope, EnvelopeContent, EnvelopePretty, QueryResponse, QueryResponsePretty, ReadStateResponsePretty, RequestInfo, RequestMetadata, RequestSenderDelegation, RequestSenderInfo};
+use crate::encode::model::{CanisterInterfaceInfo, Envelope, EnvelopeContent, EnvelopePretty, QueryResponse, QueryResponsePretty, ReadStateResponsePretty, RequestInfo, RequestMetadata, RequestSenderInfo};
 
 pub mod model;
 
@@ -104,19 +107,7 @@ fn sender_info(env: Envelope, sender: Principal) -> RequestSenderInfo {
     let delegation = match env.sender_delegation {
         None => vec![],
         Some(del_list) => {
-            let mut res = vec![];
-            for del in del_list {
-                res.push(RequestSenderDelegation {
-                    pubkey: del.delegation.pubkey,
-                    expiration: del.delegation.expiration,
-                    targets: match del.delegation.targets {
-                        None => { vec![] }
-                        Some(t) => { t }
-                    },
-                    signature: del.signature,
-                });
-            }
-            res
+            del_list.into_iter().map(|x| x.into()).collect()
         }
     };
     RequestSenderInfo {
@@ -272,6 +263,11 @@ fn find_candid_in_tree(root: HashTreeNode<Vec<u8>>) -> Vec<Vec<u8>> {
         }
         HashTreeNode::Pruned(_) => { vec![] }
     }
+}
+
+pub fn encode_and_sign_canister_request(decoded_request: String, canister_interface: Option<String>, identity: Arc<dyn Identity>) -> EncodingResult<Vec<u8>> {
+    //TODO: implement me
+    Ok(vec![1, 2, 3])
 }
 
 #[cfg(test)]

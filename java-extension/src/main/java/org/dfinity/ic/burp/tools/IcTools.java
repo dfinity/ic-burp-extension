@@ -49,6 +49,15 @@ public interface IcTools {
     String decodeCanisterResponse(byte[] encodedCborResponse, Optional<CanisterInterfaceInfo> canisterInterfaceInfo) throws IcToolsException;
 
     /**
+     * Generates an Ed25519 private key and returns it in PEM format.
+     * This key can be used with {@link Identity#ed25519Identity(String)}.
+     *
+     * @return the generated PKCS#8 v2 PEM-encoded Ed25519 private key
+     * @throws IcToolsException if key generation fails
+     */
+    String generateEd25519Key() throws IcToolsException;
+
+    /**
      * CBOR-encodes a request body and signs it using the provided identity.
      *
      * @param decodedRequest    the decoded request, as returned by {@link #decodeCanisterRequest(byte[], Optional)}

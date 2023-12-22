@@ -3,7 +3,7 @@ use std::fmt;
 
 use candid::Principal;
 use ic_certification::Certificate;
-use ic_transport_types::{ReadStateResponse, RejectResponse, SignedDelegation};
+use ic_transport_types::{Delegation, ReadStateResponse, RejectResponse, SignedDelegation};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// we cannot use the original types from ic-transport-types because we have to use a different
@@ -338,6 +338,35 @@ pub struct RequestSenderDelegation {
     pub signature: Vec<u8>,
 }
 
+impl From<SignedDelegation> for RequestSenderDelegation {
+    fn from(del: SignedDelegation) -> Self {
+        RequestSenderDelegation {
+            pubkey: del.delegation.pubkey,
+            expiration: del.delegation.expiration,
+            targets: match del.delegation.targets {
+                None => { vec![] }
+                Some(t) => { t }
+            },
+            signature: del.signature,
+        }
+    }
+}
+
+impl Into<SignedDelegation> for RequestSenderDelegation {
+    fn into(self) -> SignedDelegation {
+        SignedDelegation {
+            delegation: Delegation {
+                pubkey: self.pubkey,
+                expiration: self.expiration,
+                targets: if self.targets.len() == 0 { None } else { Some(self.targets) },
+                senders: None,
+            },
+            signature: self.signature,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct CanisterInterfaceInfo {
     pub canister_interface: String,
     pub canister_method: String,

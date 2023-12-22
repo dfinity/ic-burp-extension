@@ -1,12 +1,15 @@
 package org.dfinity.ic.burp.tools.jna;
 
 import org.dfinity.ic.burp.tools.model.IcToolsException;
+import org.dfinity.ic.burp.tools.model.Identity;
 import org.dfinity.ic.burp.tools.model.Principal;
 import org.dfinity.ic.burp.tools.model.RequestSenderInfo;
 import org.dfinity.ic.burp.tools.model.RequestType;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +19,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class JnaIcToolsTest {
 
     private final JnaIcTools jnaTools = new JnaIcTools();
+
+    @Test
+    @Disabled
+    public void shouldEncodeAndSignCanisterRequest() throws IcToolsException {
+        for (int i = 0; i < 1_000_000; i++) {
+            var x = jnaTools.encodeAndSignCanisterRequest(Base64.getEncoder().withoutPadding().encodeToString(new byte[]{1, 2, 3}), Optional.empty(), Identity.anonymousIdentity());
+            var y = jnaTools.encodeAndSignCanisterRequest(Base64.getEncoder().withoutPadding().encodeToString(new byte[]{1, 2, 3}), Optional.empty(), Identity.ed25519Identity(jnaTools.generateEd25519Key()));
+            System.out.println(Arrays.toString(x) + " " + Arrays.toString(y));
+        }
+    }
 
     @Test
     @Disabled
