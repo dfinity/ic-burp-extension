@@ -10,20 +10,24 @@ import org.dfinity.ic.burp.UI.ContextMenu.ProxyContextMenuProvider;
 import org.dfinity.ic.burp.UI.TopPanel;
 import org.dfinity.ic.burp.controller.ICController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
+import org.dfinity.ic.burp.model.InternetIdentities;
+import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.jna.JnaIcTools;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
-
 import java.util.Optional;
+
 
 public class IcBurpExtension implements BurpExtension {
 
     private AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
+    private InternetIdentities internetIdentities;
 
     @Override
     public void initialize(MontoyaApi api) {
         api.extension().setName("IC Burp Extension " + Optional.of(getClass()).map(Class::getPackage).map(Package::getImplementationVersion).orElse("DEV"));
 
-        var icTools = new JnaIcTools();
+        IcTools icTools = new JnaIcTools();
+        this.internetIdentities = new InternetIdentities(icTools);
 
         CacheLoaderSubscriber l = new CacheLoaderSubscriber();
         DataPersister dataPersister = new DataPersister(api.logging(), icTools, api.persistence().extensionData(), l);
@@ -36,7 +40,7 @@ public class IcBurpExtension implements BurpExtension {
 
         // Create top level UI component and have the loader delegate notifications to it to update the UI accordingly.
         ICController controller = new ICController(api.logging(), canisterInterfaceCache, dataPersister, icTools);
-        TopPanel tp = new TopPanel(api.logging(), canisterInterfaceCache, controller);
+        TopPanel tp = new TopPanel(api.logging(), canisterInterfaceCache, controller, this.internetIdentities);
         l.setDelegate(tp);
         controller.setTopPanel(tp);
 
@@ -44,6 +48,7 @@ public class IcBurpExtension implements BurpExtension {
 
         // Register an HTTP handler that intercepts all requests to update the interface cache.
         api.http().registerHttpHandler(new IcCacheRefresh(api.logging(), icTools, canisterInterfaceCache, callRequestCache, Optional.empty(), Optional.empty()));
+        //api.http().registerHttpHandler(new IcSigning(api.logging(), icTools, canisterInterfaceCache, dataPersister.getDefaultIdentity()));
 
         // Add Context Menu item to send IC requests to the repeater.
         api.userInterface().registerContextMenuItemsProvider(new ProxyContextMenuProvider(api, icTools, canisterInterfaceCache));

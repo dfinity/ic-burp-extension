@@ -5,6 +5,8 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import org.dfinity.ic.burp.DataPersister;
 import org.dfinity.ic.burp.UI.TopPanel;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
+import org.dfinity.ic.burp.model.JWKIdentity;
+import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.jna.JnaIcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
@@ -16,12 +18,12 @@ public class ICController {
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
     private final DataPersister dataPersister;
     private final Logging log;
-    private final JnaIcTools icTools;
+    private final IcTools icTools;
     private TopPanel topPanel;
     private Optional<String> selectedCID;
     private Optional<InterfaceType> selectedType;
 
-    public ICController(Logging log, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, DataPersister dataPersister, JnaIcTools icTools) {
+    public ICController(Logging log, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, DataPersister dataPersister, IcTools icTools) {
         this.log = log;
         this.canisterInterfaceCache = canisterInterfaceCache;
         this.dataPersister = dataPersister;
@@ -121,5 +123,9 @@ public class ICController {
 
     public void setTopPanel(TopPanel tp) {
         this.topPanel = tp;
+    }
+
+    public JWKIdentity getDefaultIdentity() {
+        return dataPersister.getDefaultIdentity();
     }
 }

@@ -4,8 +4,11 @@ import burp.api.montoya.logging.Logging;
 import burp.api.montoya.persistence.PersistedObject;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.nimbusds.jose.JOSEException;
 import org.dfinity.ic.burp.UI.CacheLoaderSubscriber;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
+import org.dfinity.ic.burp.model.JWKIdentity;
+import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.jna.JnaIcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
@@ -15,12 +18,13 @@ import java.util.Optional;
 
 public class DataPersister {
     private PersistedObject rootPO;
-    private JnaIcTools icTools;
+    private IcTools icTools;
     private Logging log;
     private CacheLoaderSubscriber cacheLoaderSubscriber;
+    private JWKIdentity defaultIdentity;
 
 
-    public DataPersister(Logging log, JnaIcTools icTools, PersistedObject rootPO, CacheLoaderSubscriber cacheLoaderSubscriber) {
+    public DataPersister(Logging log, IcTools icTools, PersistedObject rootPO, CacheLoaderSubscriber cacheLoaderSubscriber) {
         this.rootPO = rootPO;
         this.log = log;
         this.icTools = icTools;
@@ -146,5 +150,19 @@ public class DataPersister {
         this.rootPO.setChildObject("IC", icPO);
 
         return canisterInterfaceCachePO;
+    }
+
+    public JWKIdentity getDefaultIdentity() {
+        // TODO Add storing the JWK Identity to icObject
+        PersistedObject icObject = rootPO.getChildObject("IC");
+
+        try {
+            this.defaultIdentity = new JWKIdentity(log);
+        } catch (JOSEException e) {
+            log.logToError("Error generating default identity.", e);
+            return null;
+        }
+
+        return this.defaultIdentity;
     }
 }

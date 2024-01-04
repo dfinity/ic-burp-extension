@@ -3,8 +3,10 @@ package org.dfinity.ic.burp.UI.IDL;
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
+import org.dfinity.ic.burp.tools.model.InterfaceType;
 
 import javax.swing.table.AbstractTableModel;
+import java.util.List;
 import java.util.Optional;
 
 public class IDLTableModel extends AbstractTableModel {
@@ -59,13 +61,13 @@ public class IDLTableModel extends AbstractTableModel {
         } catch (Exception e) {
             return "Please select a canister.";
         }
-        Object[] keys = c.getCanisterInterfaces().keySet().toArray();
+        List<InterfaceType> keys = c.getCanisterInterfaces().keySet().stream().toList();
 
         // Check if rowIndex is in range.
-        if(rowIndex >= keys.length) return "";
+        if(rowIndex >= keys.size()) return "";
 
-        boolean selected = c.getActiveCanisterInterfaceType() == keys[rowIndex];
-        return keys[rowIndex].toString() +
+        boolean selected = c.getActiveCanisterInterfaceType() == keys.get(rowIndex);
+        return keys.get(rowIndex).toString() +
                 (selected ? " (ACTIVE)" : "");
     }
 }

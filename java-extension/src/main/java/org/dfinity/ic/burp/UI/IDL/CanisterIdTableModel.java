@@ -43,7 +43,7 @@ public class CanisterIdTableModel extends AbstractTableModel {
         // Check if rowIndex is in range.
         if(rowIndex >= keys.length) return "";
 
-        String cid = (String) syncMap.keySet().stream().sorted().toArray()[rowIndex];
+        String cid = syncMap.keySet().stream().sorted().toList().get(rowIndex);
 
         boolean isPresent;
         try {
