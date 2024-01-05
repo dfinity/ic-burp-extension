@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::ffi::{CStr, CString};
 use std::mem;
 use std::num::ParseIntError;
@@ -89,27 +88,23 @@ fn create_identity(identity_type: *const c_char, identity_pem_opt: *const c_char
     return match typ.to_uppercase().as_str() {
         "ANONYMOUS" => Ok(Arc::new(AnonymousIdentity {})),
         "ED25519" => {
-            let identity = BasicIdentity::from_pem(to_string(identity_pem_opt).as_bytes()).map_err(|x| x.to_string())?;
-            if identity_delegation_from_pubkey_opt == null() || identity_delegation_chain_opt == null() {
-                Ok(Arc::new(identity))
-            } else {
-                let from_key = base64::engine::general_purpose::STANDARD_NO_PAD.decode(to_string(identity_delegation_from_pubkey_opt)).map_err(|e| e.to_string())?;
-                let del_identity = DelegatedIdentity::new(from_key, Box::new(identity), string_to_delegation(to_string(identity_delegation_chain_opt))?);
-                Ok(Arc::new(del_identity))
-            }
+            create_key_identity(Arc::new(BasicIdentity::from_pem(to_string(identity_pem_opt).as_bytes()).map_err(|x| x.to_string())?), identity_delegation_from_pubkey_opt, identity_delegation_chain_opt)
         }
         "SECP256K1" => {
-            let identity = Secp256k1Identity::from_pem(to_string(identity_pem_opt).as_bytes()).map_err(|x| x.to_string())?;
-            if identity_delegation_from_pubkey_opt == null() || identity_delegation_chain_opt == null() {
-                Ok(Arc::new(identity))
-            } else {
-                let from_key = base64::engine::general_purpose::STANDARD_NO_PAD.decode(to_string(identity_delegation_from_pubkey_opt)).map_err(|e| e.to_string())?;
-                let del_identity = DelegatedIdentity::new(from_key, Box::new(identity), string_to_delegation(to_string(identity_delegation_chain_opt))?);
-                Ok(Arc::new(del_identity))
-            }
+            create_key_identity(Arc::new(Secp256k1Identity::from_pem(to_string(identity_pem_opt).as_bytes()).map_err(|x| x.to_string())?), identity_delegation_from_pubkey_opt, identity_delegation_chain_opt)
         }
         _ => Err(format!("unknown identity_type: {typ}")),
     };
+}
+
+fn create_key_identity(identity: Arc<dyn Identity>, identity_delegation_from_pubkey_opt: *const c_char, identity_delegation_chain_opt: *const c_char) -> Result<Arc<dyn Identity>, String> {
+    if identity_delegation_from_pubkey_opt == null() || identity_delegation_chain_opt == null() {
+        Ok(identity)
+    } else {
+        let from_key = base64::engine::general_purpose::STANDARD_NO_PAD.decode(to_string(identity_delegation_from_pubkey_opt)).map_err(|e| e.to_string())?;
+        let del_identity = DelegatedIdentity::new(from_key, Box::new(identity), string_to_delegation(to_string(identity_delegation_chain_opt))?);
+        Ok(Arc::new(del_identity))
+    }
 }
 
 /// Convert a delegation list to a string
