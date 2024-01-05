@@ -6,14 +6,18 @@ import com.sun.jna.Native;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
 import org.dfinity.ic.burp.tools.IcTools;
-import org.dfinity.ic.burp.tools.jna.model.JnaCanisterInterfaceInfo;
 import org.dfinity.ic.burp.tools.jna.model.JnaDecodeCanisterRequestResult;
 import org.dfinity.ic.burp.tools.jna.model.JnaDecodeCanisterResponseResult;
 import org.dfinity.ic.burp.tools.jna.model.JnaDiscoverCanisterInterfaceResult;
+import org.dfinity.ic.burp.tools.jna.model.JnaEncodeAndSignCanisterRequestResult;
+import org.dfinity.ic.burp.tools.jna.model.JnaGenerateEd25519KeyResult;
 import org.dfinity.ic.burp.tools.jna.model.JnaGetRequestMetadataResult;
+import org.dfinity.ic.burp.tools.jna.model.JnaIdentityInfo;
 import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
+import org.dfinity.ic.burp.tools.model.DelegationInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.Identity;
+import org.dfinity.ic.burp.tools.model.Principal;
 import org.dfinity.ic.burp.tools.model.RequestInfo;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
 
@@ -48,14 +52,39 @@ public class JnaIcTools implements IcTools {
 
         try (var ptr = new Memory(encodedCborResponse.length)) {
             ptr.write(0, encodedCborResponse, 0, encodedCborResponse.length);
-            return CIcTools.INSTANCE.decode_canister_response(ptr, encodedCborResponse.length, JnaCanisterInterfaceInfo.from(canisterInterfaceInfo)).getDecodedResponse();
+            return CIcTools.INSTANCE.decode_canister_response(ptr, encodedCborResponse.length, canisterInterfaceInfo.map(CanisterInterfaceInfo::canisterInterface).orElse(null), canisterInterfaceInfo.map(CanisterInterfaceInfo::canisterMethod).orElse(null)).getDecodedResponse();
         }
     }
 
     @Override
+    public String generateEd25519Key() throws IcToolsException {
+        return CIcTools.INSTANCE.generate_ed25519_key().getPemEncodedKey();
+    }
+
+    @Override
     public byte[] encodeAndSignCanisterRequest(String decodedRequest, Optional<String> canisterInterface, Identity signIdentity) throws IcToolsException {
-        //TODO: implement me
-        return new byte[0];
+        var identity = JnaIdentityInfo.from(signIdentity);
+        return CIcTools.INSTANCE.encode_and_sign_canister_request(decodedRequest, canisterInterface.orElse(null), identity.identity_type, identity.pem, identity.delegation_from_pubkey, identity.delegation_chain).getEncodedRequest();
+    }
+
+    @Override
+    public String internetIdentityAddTentativePasskey(String anchor, Identity signIdentity) throws IcToolsException {
+        return null;
+    }
+
+    @Override
+    public boolean internetIdentityIsPasskeyRegistered(String anchor, Identity signIdentity) throws IcToolsException {
+        return false;
+    }
+
+    @Override
+    public Principal internetIdentityGetPrincipal(String anchor, Identity signIdentity, String frontendHostname) throws IcToolsException {
+        return null;
+    }
+
+    @Override
+    public DelegationInfo internetIdentityGetDelegation(String anchor, Identity signIdentity, String frontendHostname, String sessionKey) throws IcToolsException {
+        return null;
     }
 
     public interface CIcTools extends Library {
@@ -68,7 +97,11 @@ public class JnaIcTools implements IcTools {
 
         JnaDecodeCanisterRequestResult.ByValue decode_canister_request(Pointer encodedCborRequest, int encodedCborRequestSize, String canisterInterfaceOptional);
 
-        JnaDecodeCanisterResponseResult.ByValue decode_canister_response(Pointer encodedCborResponse, int encodedCborResponseSize, JnaCanisterInterfaceInfo canisterInterfaceInfoOptional);
+        JnaDecodeCanisterResponseResult.ByValue decode_canister_response(Pointer encodedCborResponse, int encodedCborResponseSize, String canisterInterface, String canisterMethod);
+
+        JnaGenerateEd25519KeyResult.ByValue generate_ed25519_key();
+
+        JnaEncodeAndSignCanisterRequestResult.ByValue encode_and_sign_canister_request(String decodedRequest, String canisterInterfaceOptional, String identityType, String identityPemOpt, String identityDelegationFromPubkeyOpt, String identityDelegationChainOpt);
     }
 
 }
