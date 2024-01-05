@@ -1,8 +1,10 @@
 package org.dfinity.ic.burp.tools;
 
 import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
+import org.dfinity.ic.burp.tools.model.DelegationInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.Identity;
+import org.dfinity.ic.burp.tools.model.Principal;
 import org.dfinity.ic.burp.tools.model.RequestInfo;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
 
@@ -67,4 +69,53 @@ public interface IcTools {
      * @throws IcToolsException if an error occurs during encoding or signing
      */
     byte[] encodeAndSignCanisterRequest(String decodedRequest, Optional<String> canisterInterface, Identity signIdentity) throws IcToolsException;
+
+    /**
+     * Adds the provided identity as tentative passkey to the given anchor.
+     * This only succeeds if the anchor owner has previously clicked on "Add new passkey" on the II web UI.
+     * On success, returns a code that must be submitted by the user via II web UI.
+     * Use {@link #internetIdentityIsPasskeyRegistered(String, Identity)} to check if registration of the added passkey was successful.
+     *
+     * @param anchor       the anchor to which the passkey should be added
+     * @param signIdentity the identity that should be added as passkey
+     * @return the code that the user must enter to confirm passkey registration
+     * @throws IcToolsException if adding a tentative passkey is disabled or some other error occurs
+     */
+    String internetIdentityAddTentativePasskey(String anchor, Identity signIdentity) throws IcToolsException;
+
+    /**
+     * Checks if the provided identity is a registered passkey for the given anchor.
+     * Can be polled after calling {@link #internetIdentityAddTentativePasskey(String, Identity)} to check if the user has already entered the code.
+     *
+     * @param anchor       the anchor that should be checked
+     * @param signIdentity the identity that should be checked
+     * @return true if the identity was successfully registered as a passkey, false otherwise
+     * @throws IcToolsException if an error occurs during checking
+     */
+    boolean internetIdentityIsPasskeyRegistered(String anchor, Identity signIdentity) throws IcToolsException;
+
+    /**
+     * Returns the II principal of the given anchor for the given frontend hostname.
+     * This only works if the provided identity is registered as a passkey for the given anchor!
+     *
+     * @param anchor           the anchor for which the principal should be retrieved
+     * @param signIdentity     an identity that is registered as passkey for the given anchor
+     * @param frontendHostname the hostname of the frontend
+     * @return the principal for the given (anchor, frontend) combination
+     * @throws IcToolsException if an error occurs during retrieval, e.g., the signIdentity is not registered as passkey for the given anchor
+     */
+    Principal internetIdentityGetPrincipal(String anchor, Identity signIdentity, String frontendHostname) throws IcToolsException;
+
+    /**
+     * Requests issuing a delegation from II for the given anchor and frontend hostname to the provided session key.
+     * This only works if the provided identity is registered as a passkey for the given anchor!
+     *
+     * @param anchor           the anchor for which a delegation should be issued
+     * @param signIdentity     an identity that is registered as passkey for the given anchor
+     * @param frontendHostname the hostname of the frontend
+     * @param sessionKey       the session key that acts as target for the delegation, e.g. {@link #generateEd25519Key()}
+     * @return the delegation info
+     * @throws IcToolsException if an error occurs during delegation issuing, e.g., the signIdentity is not registered as passkey for the given anchor
+     */
+    DelegationInfo internetIdentityGetDelegation(String anchor, Identity signIdentity, String frontendHostname, String sessionKey) throws IcToolsException;
 }

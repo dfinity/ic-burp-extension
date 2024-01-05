@@ -14,8 +14,10 @@ import org.dfinity.ic.burp.tools.jna.model.JnaGenerateEd25519KeyResult;
 import org.dfinity.ic.burp.tools.jna.model.JnaGetRequestMetadataResult;
 import org.dfinity.ic.burp.tools.jna.model.JnaIdentityInfo;
 import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
+import org.dfinity.ic.burp.tools.model.DelegationInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.Identity;
+import org.dfinity.ic.burp.tools.model.Principal;
 import org.dfinity.ic.burp.tools.model.RequestInfo;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
 
@@ -63,6 +65,26 @@ public class JnaIcTools implements IcTools {
     public byte[] encodeAndSignCanisterRequest(String decodedRequest, Optional<String> canisterInterface, Identity signIdentity) throws IcToolsException {
         var identity = JnaIdentityInfo.from(signIdentity);
         return CIcTools.INSTANCE.encode_and_sign_canister_request(decodedRequest, canisterInterface.orElse(null), identity.identity_type, identity.pem, identity.delegation_from_pubkey, identity.delegation_chain).getEncodedRequest();
+    }
+
+    @Override
+    public String internetIdentityAddTentativePasskey(String anchor, Identity signIdentity) throws IcToolsException {
+        return null;
+    }
+
+    @Override
+    public boolean internetIdentityIsPasskeyRegistered(String anchor, Identity signIdentity) throws IcToolsException {
+        return false;
+    }
+
+    @Override
+    public Principal internetIdentityGetPrincipal(String anchor, Identity signIdentity, String frontendHostname) throws IcToolsException {
+        return null;
+    }
+
+    @Override
+    public DelegationInfo internetIdentityGetDelegation(String anchor, Identity signIdentity, String frontendHostname, String sessionKey) throws IcToolsException {
+        return null;
     }
 
     public interface CIcTools extends Library {
