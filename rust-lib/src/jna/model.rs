@@ -156,12 +156,6 @@ impl From<EncodingResult<RequestInfo>> for DecodeCanisterRequestResult {
 }
 
 #[repr(C)]
-pub struct CanisterInterfaceInfo {
-    pub canister_interface: *const c_char,
-    pub canister_method: *const c_char,
-}
-
-#[repr(C)]
 pub struct DecodeCanisterResponseResult {
     is_successful: bool,
     error_message: *const c_char,
@@ -183,6 +177,69 @@ impl From<EncodingResult<String>> for DecodeCanisterResponseResult {
                     is_successful: false,
                     error_message: str_to_ptr(err.to_string()),
                     decoded_response: null(),
+                }
+            }
+        }
+    }
+}
+
+#[repr(C)]
+pub struct GenerateEd25519KeyResult {
+    is_successful: bool,
+    error_message: *const c_char,
+    pem_encoded_key: *const c_char,
+}
+
+impl GenerateEd25519KeyResult {
+    pub fn success(pem: String) -> Self {
+        GenerateEd25519KeyResult {
+            is_successful: true,
+            error_message: null(),
+            pem_encoded_key: str_to_ptr(pem),
+        }
+    }
+
+    pub fn error(err: String) -> Self {
+        GenerateEd25519KeyResult {
+            is_successful: false,
+            error_message: str_to_ptr(err),
+            pem_encoded_key: null(),
+        }
+    }
+}
+
+#[repr(C)]
+pub struct EncodeAndSignCanisterRequestResult {
+    is_successful: bool,
+    error_message: *const c_char,
+    encoded_request: *const c_char,
+}
+
+impl EncodeAndSignCanisterRequestResult {
+    pub fn error(err: String) -> Self {
+        EncodeAndSignCanisterRequestResult {
+            is_successful: false,
+            error_message: str_to_ptr(err),
+            encoded_request: null(),
+        }
+    }
+}
+
+impl From<EncodingResult<Vec<u8>>> for EncodeAndSignCanisterRequestResult {
+    fn from(result: EncodingResult<Vec<u8>>) -> Self {
+        match result {
+            Ok(encoded_request) => {
+                EncodeAndSignCanisterRequestResult {
+                    is_successful: true,
+                    error_message: null(),
+                    encoded_request: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&encoded_request)),
+                }
+            }
+            Err(err) => {
+                EncodeAndSignCanisterRequestResult {
+                    is_successful: false,
+                    error_message: str_to_ptr(err.to_string()),
+                    encoded_request: null(),
                 }
             }
         }

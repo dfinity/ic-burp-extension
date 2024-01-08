@@ -2,74 +2,10 @@ use std::borrow::Cow;
 use std::fmt;
 
 use candid::Principal;
+use ic_agent::hash_tree::Label;
 use ic_certification::Certificate;
-use ic_transport_types::{ReadStateResponse, RejectResponse, SignedDelegation};
+use ic_transport_types::{Delegation, Envelope, EnvelopeContent, NodeSignature, QueryResponse, ReadStateResponse, RejectResponse, ReplyResponse, SignedDelegation};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-/// we cannot use the original types from ic-transport-types because we have to use a different
-/// label definition in EnvelopeContent::ReadState.paths that ensures encode(decode(x)) = x
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct Envelope<'a> {
-    /// The data that is signed by the caller.
-    pub content: Cow<'a, EnvelopeContent>,
-    /// The public key of the self-signing principal this request is from.
-    #[serde(default, skip_serializing_if = "Option::is_none", with = "serde_bytes")]
-    pub sender_pubkey: Option<Vec<u8>>,
-    /// A cryptographic signature authorizing the request. Not necessarily made by `sender_pubkey`; when delegations are involved,
-    /// `sender_sig` is the tail of the delegation chain, and `sender_pubkey` is the head.
-    #[serde(default, skip_serializing_if = "Option::is_none", with = "serde_bytes")]
-    pub sender_sig: Option<Vec<u8>>,
-    /// The chain of delegations connecting `sender_pubkey` to `sender_sig`, and in that order.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub sender_delegation: Option<Vec<SignedDelegation>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "request_type", rename_all = "snake_case")]
-pub enum EnvelopeContent {
-    /// A replicated call to a canister method, whether update or query.
-    Call {
-        /// A random series of bytes to uniquely identify this message.
-        #[serde(default, skip_serializing_if = "Option::is_none", with = "serde_bytes")]
-        nonce: Option<Vec<u8>>,
-        /// A nanosecond timestamp after which this request is no longer valid.
-        ingress_expiry: u64,
-        /// The principal that is sending this request.
-        sender: Principal,
-        /// The ID of the canister to be called.
-        canister_id: Principal,
-        /// The name of the canister method to be called.
-        method_name: String,
-        /// The argument to pass to the canister method.
-        #[serde(with = "serde_bytes")]
-        arg: Vec<u8>,
-    },
-    /// A request for information from the [IC state tree](https://internetcomputer.org/docs/current/references/ic-interface-spec#state-tree).
-    ReadState {
-        /// A nanosecond timestamp after which this request is no longer valid.
-        ingress_expiry: u64,
-        /// The principal that is sending this request.
-        sender: Principal,
-        /// A list of paths within the state tree to fetch.
-
-        paths: Vec<Vec<PathLabel>>,
-    },
-    /// An unreplicated call to a canister query method.
-    Query {
-        /// A nanosecond timestamp after which this request is no longer valid.
-        ingress_expiry: u64,
-        /// The principal that is sending this request.
-        sender: Principal,
-        /// The ID of the canister to be called.
-        canister_id: Principal,
-        /// The name of the canister method to be called.
-        method_name: String,
-        /// The argument to pass to the canister method.
-        #[serde(with = "serde_bytes")]
-        arg: Vec<u8>,
-    },
-}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -87,13 +23,13 @@ pub struct EnvelopePretty<'a> {
     pub sender_delegation: Option<Vec<SignedDelegation>>,
 }
 
-impl Into<EnvelopePretty<'_>> for Envelope<'_> {
-    fn into(self) -> EnvelopePretty<'static> {
+impl From<Envelope<'_>> for EnvelopePretty<'_> {
+    fn from(env: Envelope<'_>) -> Self {
         EnvelopePretty {
-            content: Cow::Owned(self.content.into_owned().into()),
-            sender_pubkey: self.sender_pubkey,
-            sender_sig: self.sender_sig,
-            sender_delegation: self.sender_delegation,
+            content: Cow::Owned(env.content.into_owned().into()),
+            sender_pubkey: env.sender_pubkey,
+            sender_sig: env.sender_sig,
+            sender_delegation: env.sender_delegation,
         }
     }
 }
@@ -149,12 +85,15 @@ pub enum EnvelopeContentPretty {
         method_name: String,
         /// The argument to pass to the canister method.
         arg: String,
+        /// A random series of bytes to uniquely identify this message.
+        #[serde(default, skip_serializing_if = "Option::is_none", with = "serde_bytes")]
+        nonce: Option<Vec<u8>>,
     },
 }
 
-impl Into<EnvelopeContentPretty> for EnvelopeContent {
-    fn into(self) -> EnvelopeContentPretty {
-        match self {
+impl From<EnvelopeContent> for EnvelopeContentPretty {
+    fn from(env: EnvelopeContent) -> Self {
+        match env {
             EnvelopeContent::Call { nonce, ingress_expiry, sender, canister_id, method_name, .. } => {
                 EnvelopeContentPretty::Call {
                     nonce,
@@ -165,20 +104,21 @@ impl Into<EnvelopeContentPretty> for EnvelopeContent {
                     arg: "ARG_PLACEHOLDER".parse().unwrap(),
                 }
             }
-            EnvelopeContent::Query { ingress_expiry, sender, canister_id, method_name, .. } => {
+            EnvelopeContent::Query { ingress_expiry, sender, canister_id, method_name, nonce, .. } => {
                 EnvelopeContentPretty::Query {
-                    ingress_expiry: ingress_expiry,
-                    sender: sender,
-                    canister_id: canister_id,
-                    method_name: method_name,
+                    ingress_expiry,
+                    sender,
+                    canister_id,
+                    method_name,
                     arg: "ARG_PLACEHOLDER".parse().unwrap(),
+                    nonce,
                 }
             }
             EnvelopeContent::ReadState { ingress_expiry, sender, paths } => {
                 EnvelopeContentPretty::ReadState {
                     ingress_expiry,
                     sender,
-                    paths,
+                    paths: paths.iter().map(|x| x.iter().map(|y| (*y).clone().into()).collect()).collect(),
                 }
             }
         }
@@ -198,20 +138,21 @@ impl Into<EnvelopeContent> for EnvelopeContentPretty {
                     arg: vec![],
                 }
             }
-            EnvelopeContentPretty::Query { ingress_expiry, sender, canister_id, method_name, .. } => {
+            EnvelopeContentPretty::Query { ingress_expiry, sender, canister_id, method_name, nonce, .. } => {
                 EnvelopeContent::Query {
-                    ingress_expiry: ingress_expiry,
-                    sender: sender,
-                    canister_id: canister_id,
-                    method_name: method_name,
+                    ingress_expiry,
+                    sender,
+                    canister_id,
+                    method_name,
                     arg: vec![],
+                    nonce,
                 }
             }
             EnvelopeContentPretty::ReadState { ingress_expiry, sender, paths } => {
                 EnvelopeContent::ReadState {
                     ingress_expiry,
                     sender,
-                    paths,
+                    paths: paths.iter().map(|x| x.iter().map(|y| (*y).clone().into()).collect()).collect(),
                 }
             }
         }
@@ -220,6 +161,18 @@ impl Into<EnvelopeContent> for EnvelopeContentPretty {
 
 #[derive(Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
 pub struct PathLabel(Vec<u8>);
+
+impl From<Label<Vec<u8>>> for PathLabel {
+    fn from(value: Label<Vec<u8>>) -> Self {
+        Self(Vec::from(value.as_bytes()))
+    }
+}
+
+impl Into<Label<Vec<u8>>> for PathLabel {
+    fn into(self) -> Label<Vec<u8>> {
+        Label::from_bytes(self.as_bytes())
+    }
+}
 
 impl PathLabel {
     pub fn as_bytes(&self) -> &[u8] {
@@ -238,7 +191,7 @@ impl PathLabel {
 }
 
 impl fmt::Debug for PathLabel {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.write_hex(f)
     }
 }
@@ -338,55 +291,65 @@ pub struct RequestSenderDelegation {
     pub signature: Vec<u8>,
 }
 
+impl From<SignedDelegation> for RequestSenderDelegation {
+    fn from(del: SignedDelegation) -> Self {
+        RequestSenderDelegation {
+            pubkey: del.delegation.pubkey,
+            expiration: del.delegation.expiration,
+            targets: match del.delegation.targets {
+                None => { vec![] }
+                Some(t) => { t }
+            },
+            signature: del.signature,
+        }
+    }
+}
+
+impl Into<SignedDelegation> for RequestSenderDelegation {
+    fn into(self) -> SignedDelegation {
+        SignedDelegation {
+            delegation: Delegation {
+                pubkey: self.pubkey,
+                expiration: self.expiration,
+                targets: if self.targets.len() == 0 { None } else { Some(self.targets) },
+            },
+            signature: self.signature,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct CanisterInterfaceInfo {
     pub canister_interface: String,
     pub canister_method: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(tag = "status")]
-pub enum QueryResponse {
-    #[serde(rename = "replied")]
-    Replied { reply: CallReply, signatures: Vec<NodeSignature> },
-    #[serde(rename = "rejected")]
-    Rejected(RejectResponse),
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct CallReply {
-    #[serde(with = "serde_bytes")]
-    pub arg: Vec<u8>,
-}
-
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(tag = "status")]
+#[serde(tag = "status", rename_all = "snake_case")]
 pub enum QueryResponsePretty {
-    #[serde(rename = "replied")]
-    Replied { reply: CallReplyPretty, signatures: Vec<NodeSignature> },
-    #[serde(rename = "rejected")]
-    Rejected(RejectResponse),
+    Replied {
+        reply: ReplyResponsePretty,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        signatures: Vec<NodeSignature>,
+    },
+    Rejected {
+        #[serde(flatten)]
+        reject: RejectResponse,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        signatures: Vec<NodeSignature>,
+    },
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct CallReplyPretty {
+pub struct ReplyResponsePretty {
     pub arg: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct NodeSignature {
-    pub timestamp: u64,
-    #[serde(with = "serde_bytes")]
-    pub signature: Vec<u8>,
-    #[serde(with = "serde_bytes")]
-    pub identity: Vec<u8>,
-}
-
-impl Into<QueryResponsePretty> for QueryResponse {
-    fn into(self) -> QueryResponsePretty {
-        match self {
-            QueryResponse::Replied { signatures, .. } => { QueryResponsePretty::Replied { reply: CallReplyPretty { arg: "ARG_PLACEHOLDER".parse().unwrap() }, signatures } }
-            QueryResponse::Rejected(x) => { QueryResponsePretty::Rejected(x) }
+impl From<QueryResponse> for QueryResponsePretty {
+    fn from(value: QueryResponse) -> Self {
+        match value {
+            QueryResponse::Replied { signatures, .. } => { QueryResponsePretty::Replied { reply: ReplyResponsePretty { arg: "ARG_PLACEHOLDER".parse().unwrap() }, signatures } }
+            QueryResponse::Rejected { reject, signatures } => { QueryResponsePretty::Rejected { reject, signatures } }
         }
     }
 }
@@ -394,8 +357,8 @@ impl Into<QueryResponsePretty> for QueryResponse {
 impl Into<QueryResponse> for QueryResponsePretty {
     fn into(self) -> QueryResponse {
         match self {
-            QueryResponsePretty::Replied { signatures, .. } => { QueryResponse::Replied { reply: CallReply { arg: vec![] }, signatures } }
-            QueryResponsePretty::Rejected(x) => { QueryResponse::Rejected(x) }
+            QueryResponsePretty::Replied { signatures, .. } => { QueryResponse::Replied { reply: ReplyResponse { arg: vec![] }, signatures } }
+            QueryResponsePretty::Rejected { reject, signatures } => { QueryResponse::Rejected { reject, signatures } }
         }
     }
 }
@@ -405,10 +368,10 @@ pub struct ReadStateResponsePretty {
     pub certificate: Certificate,
 }
 
-impl Into<ReadStateResponsePretty> for ReadStateResponse {
-    fn into(self) -> ReadStateResponsePretty {
+impl From<ReadStateResponse> for ReadStateResponsePretty {
+    fn from(value: ReadStateResponse) -> Self {
         ReadStateResponsePretty {
-            certificate: serde_cbor::from_slice(&self.certificate).unwrap()
+            certificate: serde_cbor::from_slice(&value.certificate).unwrap()
         }
     }
 }
