@@ -7,10 +7,9 @@ import org.dfinity.ic.burp.tools.model.RequestType;
 
 import java.util.Optional;
 
-@Structure.FieldOrder({"is_successful", "error_message", "request_type", "request_id", "sender", "pubkey", "sig", "delegation", "canister_method"})
+@Structure.FieldOrder({"error_message", "request_type", "request_id", "sender", "pubkey", "sig", "delegation", "canister_method"})
 public class JnaGetRequestMetadataResult extends Structure {
 
-    public boolean is_successful;
     public String error_message;
     public String request_type;
     public String request_id;
@@ -21,7 +20,7 @@ public class JnaGetRequestMetadataResult extends Structure {
     public String canister_method;
 
     public RequestMetadata toRequestMetadata() throws IcToolsException {
-        if (!is_successful)
+        if (error_message != null)
             throw new IcToolsException(error_message);
 
         Optional<String> method = canister_method == null || canister_method.isEmpty() ? Optional.empty() : Optional.of(canister_method);

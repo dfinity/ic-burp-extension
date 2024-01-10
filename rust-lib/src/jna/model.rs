@@ -2,15 +2,16 @@ use std::os::raw::c_char;
 use std::ptr::null;
 
 use base64::Engine;
+use candid::Principal;
 
 use crate::canister_lookup::model::LookupResult;
 use crate::encode::EncodingResult;
 use crate::encode::model::{RequestInfo, RequestMetadata};
+use crate::internet_identity::model::{DelegationInfo, InternetIdentityResult};
 use crate::jna::{delegation_to_string, str_to_ptr};
 
 #[repr(C)]
 pub struct DiscoverCanisterInterfaceResult {
-    is_successful: bool,
     error_message: *const c_char,
     canister_interface: *const c_char,
 }
@@ -20,14 +21,12 @@ impl From<LookupResult<Option<String>>> for DiscoverCanisterInterfaceResult {
         match result {
             Ok(interface_opt) => {
                 DiscoverCanisterInterfaceResult {
-                    is_successful: true,
                     error_message: null(),
                     canister_interface: str_to_ptr(interface_opt.unwrap_or("".to_string())),
                 }
             }
             Err(err) => {
                 DiscoverCanisterInterfaceResult {
-                    is_successful: false,
                     error_message: str_to_ptr(err.to_string()),
                     canister_interface: null(),
                 }
@@ -38,7 +37,6 @@ impl From<LookupResult<Option<String>>> for DiscoverCanisterInterfaceResult {
 
 #[repr(C)]
 pub struct GetRequestMetadataResult {
-    is_successful: bool,
     error_message: *const c_char,
     request_type: *const c_char,
     request_id: *const c_char,
@@ -66,7 +64,6 @@ impl From<EncodingResult<RequestMetadata>> for GetRequestMetadataResult {
                 };
 
                 GetRequestMetadataResult {
-                    is_successful: true,
                     error_message: null(),
                     request_type: str_to_ptr(rtype),
                     request_id: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&rid)),
@@ -79,7 +76,6 @@ impl From<EncodingResult<RequestMetadata>> for GetRequestMetadataResult {
             }
             Err(err) => {
                 GetRequestMetadataResult {
-                    is_successful: false,
                     error_message: str_to_ptr(err.to_string()),
                     request_type: null(),
                     request_id: null(),
@@ -96,7 +92,6 @@ impl From<EncodingResult<RequestMetadata>> for GetRequestMetadataResult {
 
 #[repr(C)]
 pub struct DecodeCanisterRequestResult {
-    is_successful: bool,
     error_message: *const c_char,
     request_type: *const c_char,
     request_id: *const c_char,
@@ -125,7 +120,6 @@ impl From<EncodingResult<RequestInfo>> for DecodeCanisterRequestResult {
                 };
 
                 DecodeCanisterRequestResult {
-                    is_successful: true,
                     error_message: null(),
                     request_type: str_to_ptr(rtype),
                     request_id: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&rid)),
@@ -139,7 +133,6 @@ impl From<EncodingResult<RequestInfo>> for DecodeCanisterRequestResult {
             }
             Err(err) => {
                 DecodeCanisterRequestResult {
-                    is_successful: false,
                     error_message: str_to_ptr(err.to_string()),
                     request_type: null(),
                     request_id: null(),
@@ -157,7 +150,6 @@ impl From<EncodingResult<RequestInfo>> for DecodeCanisterRequestResult {
 
 #[repr(C)]
 pub struct DecodeCanisterResponseResult {
-    is_successful: bool,
     error_message: *const c_char,
     decoded_response: *const c_char,
 }
@@ -167,14 +159,12 @@ impl From<EncodingResult<String>> for DecodeCanisterResponseResult {
         match result {
             Ok(decoded_request) => {
                 DecodeCanisterResponseResult {
-                    is_successful: true,
                     error_message: null(),
                     decoded_response: str_to_ptr(decoded_request),
                 }
             }
             Err(err) => {
                 DecodeCanisterResponseResult {
-                    is_successful: false,
                     error_message: str_to_ptr(err.to_string()),
                     decoded_response: null(),
                 }
@@ -185,7 +175,6 @@ impl From<EncodingResult<String>> for DecodeCanisterResponseResult {
 
 #[repr(C)]
 pub struct GenerateEd25519KeyResult {
-    is_successful: bool,
     error_message: *const c_char,
     pem_encoded_key: *const c_char,
 }
@@ -193,7 +182,6 @@ pub struct GenerateEd25519KeyResult {
 impl GenerateEd25519KeyResult {
     pub fn success(pem: String) -> Self {
         GenerateEd25519KeyResult {
-            is_successful: true,
             error_message: null(),
             pem_encoded_key: str_to_ptr(pem),
         }
@@ -201,7 +189,6 @@ impl GenerateEd25519KeyResult {
 
     pub fn error(err: String) -> Self {
         GenerateEd25519KeyResult {
-            is_successful: false,
             error_message: str_to_ptr(err),
             pem_encoded_key: null(),
         }
@@ -210,7 +197,6 @@ impl GenerateEd25519KeyResult {
 
 #[repr(C)]
 pub struct EncodeAndSignCanisterRequestResult {
-    is_successful: bool,
     error_message: *const c_char,
     encoded_request: *const c_char,
 }
@@ -218,7 +204,6 @@ pub struct EncodeAndSignCanisterRequestResult {
 impl EncodeAndSignCanisterRequestResult {
     pub fn error(err: String) -> Self {
         EncodeAndSignCanisterRequestResult {
-            is_successful: false,
             error_message: str_to_ptr(err),
             encoded_request: null(),
         }
@@ -230,17 +215,142 @@ impl From<EncodingResult<Vec<u8>>> for EncodeAndSignCanisterRequestResult {
         match result {
             Ok(encoded_request) => {
                 EncodeAndSignCanisterRequestResult {
-                    is_successful: true,
                     error_message: null(),
                     encoded_request: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&encoded_request)),
                 }
             }
             Err(err) => {
                 EncodeAndSignCanisterRequestResult {
-                    is_successful: false,
                     error_message: str_to_ptr(err.to_string()),
                     encoded_request: null(),
                 }
+            }
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InternetIdentityAddTentativePasskeyResult {
+    error_message: *const c_char,
+    code: *const c_char,
+}
+
+impl InternetIdentityAddTentativePasskeyResult {
+    pub fn error(err: String) -> Self {
+        InternetIdentityAddTentativePasskeyResult {
+            error_message: str_to_ptr(err),
+            code: null(),
+        }
+    }
+}
+
+impl From<InternetIdentityResult<String>> for InternetIdentityAddTentativePasskeyResult {
+    fn from(result: InternetIdentityResult<String>) -> Self {
+        match result {
+            Ok(code) => {
+                InternetIdentityAddTentativePasskeyResult {
+                    error_message: null(),
+                    code: str_to_ptr(code),
+                }
+            }
+            Err(err) => {
+                InternetIdentityAddTentativePasskeyResult::error(err.to_string())
+            }
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InternetIdentityIsPasskeyRegisteredResult {
+    error_message: *const c_char,
+    is_passkey_registered: *const c_char,
+}
+
+impl InternetIdentityIsPasskeyRegisteredResult {
+    pub fn error(err: String) -> Self {
+        InternetIdentityIsPasskeyRegisteredResult {
+            error_message: str_to_ptr(err),
+            is_passkey_registered: null(),
+        }
+    }
+}
+
+impl From<InternetIdentityResult<bool>> for InternetIdentityIsPasskeyRegisteredResult {
+    fn from(result: InternetIdentityResult<bool>) -> Self {
+        match result {
+            Ok(is_passkey_registered) => {
+                InternetIdentityIsPasskeyRegisteredResult {
+                    error_message: null(),
+                    is_passkey_registered: if is_passkey_registered { str_to_ptr("true".to_string()) } else { str_to_ptr("false".to_string()) },
+                }
+            }
+            Err(err) => {
+                InternetIdentityIsPasskeyRegisteredResult::error(err.to_string())
+            }
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InternetIdentityGetPrincipalResult {
+    error_message: *const c_char,
+    principal: *const c_char,
+}
+
+impl InternetIdentityGetPrincipalResult {
+    pub fn error(err: String) -> Self {
+        InternetIdentityGetPrincipalResult {
+            error_message: str_to_ptr(err),
+            principal: null(),
+        }
+    }
+}
+
+impl From<InternetIdentityResult<Principal>> for InternetIdentityGetPrincipalResult {
+    fn from(result: InternetIdentityResult<Principal>) -> Self {
+        match result {
+            Ok(principal) => {
+                InternetIdentityGetPrincipalResult {
+                    error_message: null(),
+                    principal: str_to_ptr(principal.to_text()),
+                }
+            }
+            Err(err) => {
+                InternetIdentityGetPrincipalResult::error(err.to_string())
+            }
+        }
+    }
+}
+
+#[repr(C)]
+pub struct InternetIdentityGetDelegationResult {
+    error_message: *const c_char,
+    from_pubkey: *const c_char,
+    delegation: *const c_char,
+}
+
+impl InternetIdentityGetDelegationResult {
+    pub fn error(err: String) -> Self {
+        InternetIdentityGetDelegationResult {
+            error_message: str_to_ptr(err),
+            from_pubkey: null(),
+            delegation: null(),
+        }
+    }
+}
+
+impl From<InternetIdentityResult<DelegationInfo>> for InternetIdentityGetDelegationResult {
+    fn from(result: InternetIdentityResult<DelegationInfo>) -> Self {
+        match result {
+            Ok(delegation_info) => {
+                InternetIdentityGetDelegationResult {
+                    error_message: null(),
+                    from_pubkey: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(delegation_info.from_pubkey)),
+                    delegation: str_to_ptr(delegation_to_string(delegation_info.delegation_chain)),
+                }
+            }
+            Err(err) => {
+                InternetIdentityGetDelegationResult::error(err.to_string())
             }
         }
     }
