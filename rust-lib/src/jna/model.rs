@@ -175,8 +175,8 @@ impl From<EncodingResult<String>> for DecodeCanisterResponseResult {
 
 #[repr(C)]
 pub struct GenerateEd25519KeyResult {
-    error_message: *const c_char,
-    pem_encoded_key: *const c_char,
+    pub error_message: *const c_char,
+    pub pem_encoded_key: *const c_char,
 }
 
 impl GenerateEd25519KeyResult {
@@ -324,9 +324,9 @@ impl From<InternetIdentityResult<Principal>> for InternetIdentityGetPrincipalRes
 
 #[repr(C)]
 pub struct InternetIdentityGetDelegationResult {
-    error_message: *const c_char,
-    from_pubkey: *const c_char,
-    delegation: *const c_char,
+    pub error_message: *const c_char,
+    pub from_pubkey: *const c_char,
+    pub delegation: *const c_char,
 }
 
 impl InternetIdentityGetDelegationResult {

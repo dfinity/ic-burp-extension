@@ -228,3 +228,73 @@ fn to_vec(buf: *const u8, size: usize) -> Vec<u8> {
 fn vec_to_ptr(vec: Vec<u8>) -> (*const u8, usize) {
     (vec.as_ptr(), vec.len())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::ptr::null;
+
+    use candid::Principal;
+    use ic_agent::Identity;
+    use ic_agent::identity::{BasicIdentity, DelegatedIdentity};
+    use ic_transport_types::{Delegation, SignedDelegation};
+
+    use crate::internet_identity::model::DelegationInfo;
+    use crate::jna::{create_identity, generate_ed25519_key, str_to_ptr, to_string};
+    use crate::jna::model::InternetIdentityGetDelegationResult;
+
+    #[test]
+    fn generate_ed25519_key_for_basic_identity() {
+        let resp = generate_ed25519_key();
+
+        assert_eq!(resp.error_message, null());
+        let pem = to_string(resp.pem_encoded_key);
+        assert!(BasicIdentity::from_pem(pem.as_bytes()).is_ok());
+    }
+
+    #[test]
+    fn create_anonymous_identity() {
+        let identity = create_identity(str_to_ptr("ANONYMOUS".to_string()), null(), null(), null());
+
+        assert!(identity.is_ok());
+        assert_eq!(identity.unwrap().sender().unwrap(), Principal::anonymous());
+    }
+
+    #[test]
+    fn create_basic_identity() {
+        let key = generate_ed25519_key().pem_encoded_key;
+        let pem = to_string(key);
+        let basic = BasicIdentity::from_pem(pem.as_bytes()).unwrap();
+        let identity = create_identity(str_to_ptr("ED25519".to_string()), key, null(), null());
+
+        assert!(identity.is_ok());
+        assert_eq!(identity.unwrap().sender(), basic.sender());
+    }
+
+    #[test]
+    fn create_delegated_identity() {
+        let key = generate_ed25519_key().pem_encoded_key;
+        let pem = to_string(key);
+        let delegation_target = BasicIdentity::from_pem(pem.as_bytes()).unwrap();
+        let delegation_source = BasicIdentity::from_pem(to_string(generate_ed25519_key().pem_encoded_key).as_bytes()).unwrap();
+        let delegation_unsigned = Delegation {
+            pubkey: delegation_target.public_key().unwrap(),
+            expiration: u64::MAX,
+            targets: Some(vec![Principal::management_canister(), Principal::anonymous()]),
+        };
+        let sig = delegation_source.sign_delegation(&delegation_unsigned).unwrap();
+        let delegation_signed = SignedDelegation {
+            delegation: delegation_unsigned,
+            signature: sig.signature.unwrap(),
+        };
+        let delegation: InternetIdentityGetDelegationResult = Ok(DelegationInfo {
+            from_pubkey: delegation_source.public_key().unwrap(),
+            delegation_chain: vec![delegation_signed.clone().into()],
+        }).into();
+        let delegation_identity = DelegatedIdentity::new(delegation_source.public_key().unwrap(), Box::new(delegation_target), vec![delegation_signed]);
+
+        let identity = create_identity(str_to_ptr("ED25519".to_string()), key, delegation.from_pubkey, delegation.delegation);
+
+        assert!(identity.is_ok());
+        assert_eq!(identity.unwrap().sender(), delegation_identity.sender());
+    }
+}
