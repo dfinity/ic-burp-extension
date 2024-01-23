@@ -113,9 +113,9 @@ public interface IcTools {
      * @param anchor           the anchor for which a delegation should be issued
      * @param signIdentity     an identity that is registered as passkey for the given anchor
      * @param frontendHostname the hostname of the frontend
-     * @param sessionKey       the session key that acts as target for the delegation, e.g. {@link #generateEd25519Key()}
+     * @param sessionIdentity  the identity that is the delegation target, e.g., Identity.ed25519Identity({@link #generateEd25519Key()})
      * @return the delegation info
      * @throws IcToolsException if an error occurs during delegation issuing, e.g., the signIdentity is not registered as passkey for the given anchor
      */
-    DelegationInfo internetIdentityGetDelegation(String anchor, Identity signIdentity, String frontendHostname, String sessionKey) throws IcToolsException;
+    DelegationInfo internetIdentityGetDelegation(String anchor, Identity signIdentity, String frontendHostname, Identity sessionIdentity) throws IcToolsException;
 }

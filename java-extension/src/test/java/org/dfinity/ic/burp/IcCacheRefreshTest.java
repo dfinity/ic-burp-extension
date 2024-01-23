@@ -40,7 +40,7 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class IcCacheRefreshTest {
 
-    private static final RequestMetadata META_DATA = new RequestMetadata(RequestType.CALL, "request_id", new RequestSenderInfo(new Principal("2vxsx-fae"), Optional.empty(), Optional.empty(), List.of()), Optional.of("canister_method"));
+    private static final RequestMetadata META_DATA = new RequestMetadata(RequestType.CALL, "request_id", new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), Optional.of("canister_method"));
     private final byte[] BODY_BYTES = new byte[]{0, 1, 2, 3};
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache = Caffeine.newBuilder().buildAsync(
             a -> new CanisterCacheInfo(a, InterfaceType.AUTOMATIC));

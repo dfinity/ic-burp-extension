@@ -15,12 +15,66 @@ import java.net.http.HttpResponse;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class JnaIcToolsTest {
 
     private final JnaIcTools jnaTools = new JnaIcTools();
+
+    public static void main(String[] args) throws Exception {
+        new JnaIcToolsTest().shouldRegisterPasskeyIssueDelegationAndUseIt();
+    }
+
+    public void shouldRegisterPasskeyIssueDelegationAndUseIt() throws Exception {
+        // passkey registration
+        var signIdentity = Identity.ed25519Identity(jnaTools.generateEd25519Key());
+        var scanner = new Scanner(System.in);
+        System.out.println("Internet identity Manual Integration Test");
+        System.out.println("1. Login to internet identity and click on \"Add new Passkey\"");
+        System.out.print("2. Enter anchor: ");
+        var anchor = scanner.nextLine();
+        var code = jnaTools.internetIdentityAddTentativePasskey(anchor, signIdentity);
+        System.out.println("3. Enter the following code: " + code);
+        System.out.print("Waiting for code submission");
+        while (!jnaTools.internetIdentityIsPasskeyRegistered(anchor, signIdentity)) {
+            System.out.print(".");
+            TimeUnit.SECONDS.sleep(1);
+        }
+        System.out.println("\nThe following passkey was successfully registered:\n" + signIdentity.pem.orElseThrow());
+
+        // get nns principal
+        var nnsHostname = "https://nns.ic0.app";
+        var nnsPrincipal = jnaTools.internetIdentityGetPrincipal(anchor, signIdentity, nnsHostname);
+        System.out.println("\n\nNNS principal of anchor " + anchor + ": " + nnsPrincipal);
+
+        // get delegation for nns principal
+        var sessionKey = jnaTools.generateEd25519Key();
+        var sessionIdentity = Identity.ed25519Identity(sessionKey);
+        var delegationInfo = jnaTools.internetIdentityGetDelegation(anchor, signIdentity, nnsHostname, sessionIdentity);
+        var delegatedIdentity = Identity.delegatedEd25519Identity(sessionKey, delegationInfo);
+
+        // call whoami canister with delegated identity
+        var queryVector = "D9D9F7A167636F6E74656E74A663617267464449444C00006B63616E69737465725F69644A000000000030005701016E696E67726573735F6578706972791B17A72908642A68006B6D6574686F645F6E616D656677686F616D696C726571756573745F747970656571756572796673656E6465724104";
+        var api = jnaTools.discoverCanisterInterface("ivcos-eqaaa-aaaab-qablq-cai");
+        var url = "https://ic0.app/api/v2/canister/ivcos-eqaaa-aaaab-qablq-cai/query";
+        var client = HttpClient.newHttpClient();
+        var info = jnaTools.decodeCanisterRequest(HexFormat.of().parseHex(queryVector), api);
+        var modifiedReq = jnaTools.encodeAndSignCanisterRequest(info.decodedRequest(), api, delegatedIdentity);
+
+        var httpReq = HttpRequest
+                .newBuilder()
+                .uri(new URI(url))
+                .POST(HttpRequest.BodyPublishers.ofByteArray(modifiedReq))
+                .build();
+        var httpResp = client.send(httpReq, HttpResponse.BodyHandlers.ofByteArray());
+        assertEquals(httpResp.statusCode(), 200);
+        var whoamiPrincipal = parsePrincipal(httpResp.body()).orElseThrow();
+        System.out.println("\n\nPrincipal returned by whoami canister: " + whoamiPrincipal);
+        assertEquals(nnsPrincipal, whoamiPrincipal);
+    }
 
     @Test
     @Disabled
@@ -46,17 +100,17 @@ class JnaIcToolsTest {
             var info = jnaTools.decodeCanisterRequest(HexFormat.of().parseHex(vector), api);
             for (int j = 0; j < 2; j++) {
                 Identity identity;
-                Optional<String> expectedPrincipal;
+                Optional<Principal> expectedPrincipal;
                 if (j == 0) {
                     identity = Identity.anonymousIdentity();
-                    expectedPrincipal = Optional.of("04");
+                    expectedPrincipal = Optional.of(Principal.anonymous());
                 } else {
                     String ED_KEY = """
                             -----BEGIN PRIVATE KEY-----
                             MFMCAQEwBQYDK2VwBCIEIJvE29AVb/LDNUT4NSBl+fX6YidZHCFO61/ovtwti067oSMDIQD8sYTLINvmF8qufGPrgbf/uUupJL2JKP9eS7MLk0RR7g==
                             -----END PRIVATE KEY-----""";
                     identity = Identity.ed25519Identity(ED_KEY);
-                    expectedPrincipal = Optional.of("10cbca47b4b0f5ee826b46310008966462a117004fb8ca9a2a4cc13502");
+                    expectedPrincipal = Optional.of(Principal.fromHexBytes("10cbca47b4b0f5ee826b46310008966462a117004fb8ca9a2a4cc13502"));
                 }
 
                 var modifiedReq = jnaTools.encodeAndSignCanisterRequest(info.decodedRequest(), api, identity);
@@ -75,14 +129,14 @@ class JnaIcToolsTest {
         }
     }
 
-    private Optional<String> parsePrincipal(byte[] response) {
+    private Optional<Principal> parsePrincipal(byte[] response) {
         var hex = HexFormat.of().formatHex(response);
         var i = hex.indexOf("4449444c"); // candid magic bytes
         if (i == -1) {
             return Optional.empty();
         }
         var len = HexFormat.fromHexDigits(hex.substring(i + 16, i + 18));
-        return Optional.of(hex.substring(i + 18, i + 18 + len * 2));
+        return Optional.of(Principal.fromHexBytes(hex.substring(i + 18, i + 18 + len * 2)));
     }
 
     @Test
@@ -95,7 +149,7 @@ class JnaIcToolsTest {
 
         assertEquals(res.type(), RequestType.QUERY);
         assertEquals(res.requestId(), "hnB4SQO14UAhPiWVOQFXUyVsJqfv3qYV8Ol/MSFvqCo");
-        assertEquals(res.senderInfo().sender(), new Principal("k365o-mhgcd-4clpg-xxzxx-mqzo2-ghcqe-pl5ue-ghnfs-edgsa-wp5cl-oae"));
+        assertEquals(res.senderInfo().sender(), Principal.fromText("k365o-mhgcd-4clpg-xxzxx-mqzo2-ghcqe-pl5ue-ghnfs-edgsa-wp5cl-oae"));
         assertEquals(res.senderInfo().pubkey(), Optional.of("MDwwDAYKKwYBBAGDuEMBAgMsAAoAAAAAAAAABwEBJWvlrb8tx52xOUGFcWWO6DHSAXZG6DTDxjZJuy35Zrk"));
         assertEquals(res.senderInfo().sig(), Optional.of("+s8g2QYeK2hDzYpYZfhw0O86FI6hH0fdhTwLntGvJjDmMl7WsKeeBd5O1rjKf9/uouUmx2SKhcqWHM6tJpKAsg"));
         assertEquals(res.senderInfo().delegation().size(), 1);
@@ -1931,7 +1985,7 @@ class JnaIcToolsTest {
             var res = jnaTools.decodeCanisterRequest(queryBin, Optional.empty());
             assertEquals(res.type(), RequestType.QUERY);
             assertEquals(res.requestId(), "Wca4JtAFIbaLi7CvLamBFFLsUJCIRh6EMUkaYQ7XmgM");
-            assertEquals(res.senderInfo(), new RequestSenderInfo(new Principal("2vxsx-fae"), Optional.empty(), Optional.empty(), List.of()));
+            assertEquals(res.senderInfo(), new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()));
             assertEquals(res.canisterMethod(), Optional.of("http_request"));
             assertEquals(res.decodedRequest(), """
                     {

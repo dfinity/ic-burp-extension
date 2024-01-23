@@ -13,6 +13,10 @@ import org.dfinity.ic.burp.tools.jna.model.JnaEncodeAndSignCanisterRequestResult
 import org.dfinity.ic.burp.tools.jna.model.JnaGenerateEd25519KeyResult;
 import org.dfinity.ic.burp.tools.jna.model.JnaGetRequestMetadataResult;
 import org.dfinity.ic.burp.tools.jna.model.JnaIdentityInfo;
+import org.dfinity.ic.burp.tools.jna.model.JnaInternetIdentityAddTentativePasskeyResult;
+import org.dfinity.ic.burp.tools.jna.model.JnaInternetIdentityGetDelegationResult;
+import org.dfinity.ic.burp.tools.jna.model.JnaInternetIdentityGetPrincipalResult;
+import org.dfinity.ic.burp.tools.jna.model.JnaInternetIdentityIsPasskeyRegisteredResult;
 import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
 import org.dfinity.ic.burp.tools.model.DelegationInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
@@ -69,22 +73,27 @@ public class JnaIcTools implements IcTools {
 
     @Override
     public String internetIdentityAddTentativePasskey(String anchor, Identity signIdentity) throws IcToolsException {
-        return null;
+        var identity = JnaIdentityInfo.from(signIdentity);
+        return CIcTools.INSTANCE.internet_identity_add_tentative_passkey(anchor, identity.identity_type, identity.pem, identity.delegation_from_pubkey, identity.delegation_chain).getCode();
     }
 
     @Override
     public boolean internetIdentityIsPasskeyRegistered(String anchor, Identity signIdentity) throws IcToolsException {
-        return false;
+        var identity = JnaIdentityInfo.from(signIdentity);
+        return CIcTools.INSTANCE.internet_identity_is_passkey_registered(anchor, identity.identity_type, identity.pem, identity.delegation_from_pubkey, identity.delegation_chain).isPasskeyRegistered();
     }
 
     @Override
     public Principal internetIdentityGetPrincipal(String anchor, Identity signIdentity, String frontendHostname) throws IcToolsException {
-        return null;
+        var identity = JnaIdentityInfo.from(signIdentity);
+        return CIcTools.INSTANCE.internet_identity_get_principal(anchor, identity.identity_type, identity.pem, identity.delegation_from_pubkey, identity.delegation_chain, frontendHostname).getPrincipal();
     }
 
     @Override
-    public DelegationInfo internetIdentityGetDelegation(String anchor, Identity signIdentity, String frontendHostname, String sessionKey) throws IcToolsException {
-        return null;
+    public DelegationInfo internetIdentityGetDelegation(String anchor, Identity signIdentity, String frontendHostname, Identity sessionIdentity) throws IcToolsException {
+        var identity = JnaIdentityInfo.from(signIdentity);
+        var sIdentity = JnaIdentityInfo.from(sessionIdentity);
+        return CIcTools.INSTANCE.internet_identity_get_delegation(anchor, identity.identity_type, identity.pem, identity.delegation_from_pubkey, identity.delegation_chain, frontendHostname, sIdentity.identity_type, sIdentity.pem, sIdentity.delegation_from_pubkey, sIdentity.delegation_chain).getDelegationInfo();
     }
 
 
@@ -104,6 +113,14 @@ public class JnaIcTools implements IcTools {
         JnaGenerateEd25519KeyResult.ByValue generate_ed25519_key();
 
         JnaEncodeAndSignCanisterRequestResult.ByValue encode_and_sign_canister_request(String decodedRequest, String canisterInterfaceOptional, String identityType, String identityPemOpt, String identityDelegationFromPubkeyOpt, String identityDelegationChainOpt);
+
+        JnaInternetIdentityAddTentativePasskeyResult.ByValue internet_identity_add_tentative_passkey(String anchor, String identityType, String identityPemOpt, String identityDelegationFromPubkeyOpt, String identityDelegationChainOpt);
+
+        JnaInternetIdentityIsPasskeyRegisteredResult.ByValue internet_identity_is_passkey_registered(String anchor, String identityType, String identityPemOpt, String identityDelegationFromPubkeyOpt, String identityDelegationChainOpt);
+
+        JnaInternetIdentityGetPrincipalResult.ByValue internet_identity_get_principal(String anchor, String identityType, String identityPemOpt, String identityDelegationFromPubkeyOpt, String identityDelegationChainOpt, String frontendHostname);
+
+        JnaInternetIdentityGetDelegationResult.ByValue internet_identity_get_delegation(String anchor, String identityType, String identityPemOpt, String identityDelegationFromPubkeyOpt, String identityDelegationChainOpt, String frontendHostname, String sessionIdentityType, String sessionIdentityPemOpt, String sessionIdentityDelegationFromPubkeyOpt, String sessionIdentityDelegationChainOpt);
     }
 
 }
