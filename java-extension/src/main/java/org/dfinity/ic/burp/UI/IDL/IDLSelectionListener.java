@@ -28,6 +28,5 @@ public class IDLSelectionListener  implements ListSelectionListener {
 
         log.logToOutput("IDLSelectionListener.valueChanged: " + e);
         icController.setSelectedType(idlManagementPanel.getSelectedType());
-        //idlManagementPanel.reloadIdlFromSelection();
     }
 }

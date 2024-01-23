@@ -83,7 +83,7 @@ public class IDLPanel extends JPanel{
         if(idlTable.getSelectedRow() < 0 || idlTable.getSelectedColumn() < 0){
             return Optional.empty();
         }
-        Optional<Object> val = Optional.ofNullable(idlTable.getValueAt(idlTable.getSelectedRow(), idlTable.getSelectedColumn()));
+        Optional<Object> val = Optional.ofNullable(idlTable.getValueAt(idlTable.getSelectedRow(), 0));
         if (val.isEmpty()) {
             return Optional.empty();
         }

@@ -18,16 +18,43 @@ public class IiController {
 
     public void addII() {
         String anchor = JOptionPane.showInputDialog(this.internetIdentityPanel, "New II Anchor: ", "123456");
+        if(anchor == null) return;
         try{
-            Optional<String> code = internetIdentities.addIdentity(anchor);
+            Optional<String> code = internetIdentities.addIdentity(anchor.trim());
             if(code.isEmpty()){
-                JOptionPane.showMessageDialog(this.internetIdentityPanel, "Activation code could not be obtained. Try generating the code again later.", "II Creation error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this.internetIdentityPanel, "Activation code could not be obtained.", "II Creation error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             JOptionPane.showMessageDialog(this.internetIdentityPanel, "Use the following code to activate your passkey: " + code, "II Activation", JOptionPane.INFORMATION_MESSAGE);
 
         } catch (IcToolsException e){
             JOptionPane.showMessageDialog(this.internetIdentityPanel, "Couldn't create II", "II Creation error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    public void checkActivations(){
+        boolean result;
+
+        result = this.internetIdentities.checkActivations();
+
+        if(!result){
+            JOptionPane.showMessageDialog(this.internetIdentityPanel, "One or more II's could not be updated.", "Update error.", JOptionPane.ERROR_MESSAGE);
+        }
+        else {
+            JOptionPane.showMessageDialog(this.internetIdentityPanel, "Update successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    public void reactivateSelected() {
+        this.internetIdentities.reactivateSelected();
+    }
+
+    public void removeSelected() {
+        if(this.internetIdentities.removeSelected()){
+            JOptionPane.showMessageDialog(this.internetIdentityPanel, "Removal success.", "Success", JOptionPane.INFORMATION_MESSAGE);
+        }
+        else{
+            JOptionPane.showMessageDialog(this.internetIdentityPanel, "Removal failed.", "Failure", JOptionPane.ERROR_MESSAGE);
         }
     }
 }

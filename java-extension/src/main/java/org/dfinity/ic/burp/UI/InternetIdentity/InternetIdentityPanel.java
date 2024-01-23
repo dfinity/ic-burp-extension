@@ -5,20 +5,24 @@ import org.dfinity.ic.burp.UI.ICButton;
 import org.dfinity.ic.burp.controller.IdlController;
 import org.dfinity.ic.burp.controller.IiController;
 import org.dfinity.ic.burp.model.InternetIdentities;
+import org.dfinity.ic.burp.tools.model.InterfaceType;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
+import java.util.Optional;
 
 public class InternetIdentityPanel extends JPanel {
     private final Logging log;
     private final IiController iiController;
+    private final JTable iiTable;
 
     public InternetIdentityPanel(Logging log, InternetIdentities internetIdentities) {
         this.log = log;
         this.iiController = new IiController(internetIdentities, this);
 
-        JTable iiTable = new JTable(internetIdentities);
+        iiTable = new JTable(internetIdentities);
+        iiTable.getSelectionModel().addListSelectionListener(new IiSelectionListener(log, internetIdentities, this));
 
         JScrollPane iiTableScrollPane = new JScrollPane(iiTable);
         iiTableScrollPane.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -37,15 +41,42 @@ public class InternetIdentityPanel extends JPanel {
             iiController.addII();
         });
         this.add(addIIButton);
+        this.add(Box.createRigidArea(new Dimension(0, 5)));
 
         JButton removeIIButton = new ICButton(log, "Remove", e -> {
-            // TODO
+            iiController.removeSelected();
         });
-        this.add(addIIButton);
         this.add(removeIIButton);
+        this.add(Box.createRigidArea(new Dimension(0, 5)));
+
+        JButton checkActivationsButton = new ICButton(log, "Refresh IIs", e -> {
+            iiController.checkActivations();
+        });
+        this.add(checkActivationsButton);
+        this.add(Box.createRigidArea(new Dimension(0, 5)));
+
+        JButton reactivateButton = new ICButton(log, "Reactive selected II", e -> {
+            iiController.reactivateSelected();
+        });
+        this.add(reactivateButton);
+        this.add(Box.createRigidArea(new Dimension(0, 5)));
 
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         this.setAlignmentX(Component.LEFT_ALIGNMENT);
         this.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+    }
+
+    public Optional<String> getSelectedIiAnchor(){
+        if(iiTable.getSelectedRow() < 0 || iiTable.getSelectedColumn() < 0){
+            return Optional.empty();
+        }
+        Optional<Object> val = Optional.ofNullable(iiTable.getValueAt(iiTable.getSelectedRow(), 0));
+        if (val.isEmpty()) {
+            return Optional.empty();
+        }
+        // TODO, very ugly way to go from the value at (which is a String that was manipulated) to the type.
+        String valString = val.get().toString();
+        log.logToOutput("getSelectedIiAnchor return value: " + valString);
+        return Optional.of(valString);
     }
 }

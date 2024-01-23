@@ -7,6 +7,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dfinity.ic.burp.UI.CacheLoaderSubscriber;
 import org.dfinity.ic.burp.UI.ContextMenu.ProxyContextMenuProvider;
+import org.dfinity.ic.burp.UI.InternetIdentity.IiSelectionListener;
 import org.dfinity.ic.burp.UI.TopPanel;
 import org.dfinity.ic.burp.controller.IdlController;
 import org.dfinity.ic.burp.controller.IiController;
@@ -15,6 +16,8 @@ import org.dfinity.ic.burp.model.InternetIdentities;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.jna.JnaIcTools;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
+
+import javax.swing.*;
 import java.util.Optional;
 
 

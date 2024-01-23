@@ -23,6 +23,14 @@ public class InternetIdentity {
     // Keeps track whether the passkey was added to the II by the user. It is possible this boolean is set to false
     // if it is detected that the passkey is no longer valid.
     private Boolean active;
+    private IiState state;
+
+    private enum IiState{
+        Initial,
+        CodeObtained,
+        Active,
+        Deactivated
+    }
 
     public InternetIdentity(String anchor, IcTools tools) throws IcToolsException {
         this.anchor = anchor;
@@ -33,19 +41,28 @@ public class InternetIdentity {
         this.creationDate = new Date();
         this.activationDate = Optional.empty();
         this.active = false;
+        this.state = code.isEmpty() ? IiState.Initial : IiState.CodeObtained;
     }
 
+    /**
+     *
+     * @return The activation code if it has been requested with internetIdentityAddTentativePasskey during initialization.
+     */
     public Optional<String> getCode() {
-        try {
-            if (this.code.isEmpty()) {
-                this.code = Optional.ofNullable(icTools.internetIdentityAddTentativePasskey(this.anchor, this.passkey));
-            }
-        }
-        catch(IcToolsException e){
-            return Optional.empty();
-        }
         return this.code;
     }
+
+    /**
+     * This function updates isActive by polling the status of the passkey with the II canister.
+     * It should not be called too often as it leads to a query call to the IC.
+     */
+    public void checkActivation() throws IcToolsException {
+        this.active = icTools.internetIdentityIsPasskeyRegistered(this.anchor, this.passkey);
+        if(!this.active){
+            this.activationDate = Optional.empty();
+        }
+    }
+
 
     public boolean isActive() {
         if(!this.active) {
@@ -53,6 +70,7 @@ public class InternetIdentity {
                 this.active = icTools.internetIdentityIsPasskeyRegistered(this.anchor, this.passkey);
                 if(this.active){
                     this.activationDate = Optional.of(new Date());
+                    this.code = Optional.empty();
                 }
             } catch (IcToolsException e){
                 return this.active;
@@ -67,5 +85,9 @@ public class InternetIdentity {
 
     public Optional<Date> activationDate() {
         return this.activationDate;
+    }
+
+    public void reactivate() {
+        // TODO Implement
     }
 }

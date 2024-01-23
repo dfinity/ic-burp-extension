@@ -1,14 +1,17 @@
 package org.dfinity.ic.burp.model;
 
 import burp.api.montoya.logging.Logging;
+import org.dfinity.ic.burp.UI.InternetIdentity.IiSelectionListener;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.Identity;
 import org.dfinity.ic.burp.tools.model.RequestInfo;
 
+import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 public class InternetIdentities extends AbstractTableModel {
@@ -18,26 +21,17 @@ public class InternetIdentities extends AbstractTableModel {
     // Maps anchor (Integer) onto pem files (String)
     HashMap<String, InternetIdentity> identities = new HashMap<>();
 
+    private Optional<String> selectedII;
+
     public InternetIdentities(Logging log, IcTools tools){
         this.log = log;
         this.tools = tools;
-
-        // TODO Remove after UI testing. For testing purposes, add some dummy data.
-        try {
-            identities.put("123456", new InternetIdentity("Anchor", tools));
-            identities.put("654321", new InternetIdentity("Anchor", tools));
-        } catch (IcToolsException e) {
-            throw new RuntimeException(e);
-        }
+        this.selectedII = Optional.empty();
     }
 
     public Optional<String> addIdentity(String anchor) throws IcToolsException {
-        /*
-        String pem = IcTools.generateEd25519Key();
-        Identity identity = Identity.ed25519Identity(pem);
-        String code = tools.iiAddPasskey(anchor, identity);
-        identities.put(anchor, pem);
-        */
+        if(anchor == null) return Optional.empty();
+
         if(identities.containsKey(anchor))
             return Optional.empty();
         InternetIdentity ii = new InternetIdentity(anchor, tools);
@@ -47,14 +41,19 @@ public class InternetIdentities extends AbstractTableModel {
         return ii.getCode();
     }
 
-    /*
-    public boolean pollIdentity(Integer anchor){
-        String pem = identities.get(anchor);
-        if(pem == null){
-            return false;
+
+    public boolean checkActivations() {
+        boolean r = true;
+        for(Map.Entry<String, InternetIdentity> entry : identities.entrySet()) {
+            InternetIdentity id = entry.getValue();
+            try {
+                id.checkActivation();
+            } catch (IcToolsException e) {
+                r = false;
+            }
         }
-        return tools.iiIsPasskeyRegistered(anchor, Identity.ed25519Identity(pem));
-    }*/
+        return r;
+    }
 
     /**
      * This method returns the correct identity that should be used to re-sign the request.
@@ -81,6 +80,34 @@ public class InternetIdentities extends AbstractTableModel {
             }
         }*/
         return Optional.empty();
+    }
+
+
+    public boolean reactivateSelected() {
+        InternetIdentity ii = getSelectedII();
+        if (ii == null)
+            return false;
+
+        ii.reactivate();
+
+         return false;
+    }
+
+    public boolean removeSelected() {
+        if(this.selectedII.isEmpty()) return false;
+
+        return this.identities.remove(this.selectedII.get()) != null;
+    }
+
+    public void setSelectedIiAnchor(Optional<String> anchor){
+        this.selectedII = anchor;
+    }
+
+    public InternetIdentity getSelectedII(){
+        if(this.selectedII.isEmpty()) return null;
+
+        InternetIdentity ii = this.identities.get(this.selectedII.get());
+        return ii;
     }
 
     @Override
