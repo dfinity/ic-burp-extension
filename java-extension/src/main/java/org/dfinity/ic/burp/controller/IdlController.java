@@ -7,14 +7,13 @@ import org.dfinity.ic.burp.UI.TopPanel;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.model.JWKIdentity;
 import org.dfinity.ic.burp.tools.IcTools;
-import org.dfinity.ic.burp.tools.jna.JnaIcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
 
 import java.util.Map;
 import java.util.Optional;
 
-public class ICController {
+public class IdlController {
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
     private final DataPersister dataPersister;
     private final Logging log;
@@ -23,7 +22,7 @@ public class ICController {
     private Optional<String> selectedCID;
     private Optional<InterfaceType> selectedType;
 
-    public ICController(Logging log, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, DataPersister dataPersister, IcTools icTools) {
+    public IdlController(Logging log, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, DataPersister dataPersister, IcTools icTools) {
         this.log = log;
         this.canisterInterfaceCache = canisterInterfaceCache;
         this.dataPersister = dataPersister;

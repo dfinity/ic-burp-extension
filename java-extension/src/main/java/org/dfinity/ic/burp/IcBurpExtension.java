@@ -8,7 +8,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dfinity.ic.burp.UI.CacheLoaderSubscriber;
 import org.dfinity.ic.burp.UI.ContextMenu.ProxyContextMenuProvider;
 import org.dfinity.ic.burp.UI.TopPanel;
-import org.dfinity.ic.burp.controller.ICController;
+import org.dfinity.ic.burp.controller.IdlController;
+import org.dfinity.ic.burp.controller.IiController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.model.InternetIdentities;
 import org.dfinity.ic.burp.tools.IcTools;
@@ -27,7 +28,7 @@ public class IcBurpExtension implements BurpExtension {
         api.extension().setName("IC Burp Extension " + Optional.of(getClass()).map(Class::getPackage).map(Package::getImplementationVersion).orElse("DEV"));
 
         IcTools icTools = new JnaIcTools();
-        this.internetIdentities = new InternetIdentities(icTools);
+        this.internetIdentities = new InternetIdentities(api.logging(), icTools);
 
         CacheLoaderSubscriber l = new CacheLoaderSubscriber();
         DataPersister dataPersister = new DataPersister(api.logging(), icTools, api.persistence().extensionData(), l);
@@ -39,10 +40,10 @@ public class IcBurpExtension implements BurpExtension {
         api.userInterface().registerHttpResponseEditorProvider(viewerProvider);
 
         // Create top level UI component and have the loader delegate notifications to it to update the UI accordingly.
-        ICController controller = new ICController(api.logging(), canisterInterfaceCache, dataPersister, icTools);
-        TopPanel tp = new TopPanel(api.logging(), canisterInterfaceCache, controller, this.internetIdentities);
+        IdlController idlController = new IdlController(api.logging(), canisterInterfaceCache, dataPersister, icTools);
+        TopPanel tp = new TopPanel(api.logging(), canisterInterfaceCache, idlController, this.internetIdentities);
         l.setDelegate(tp);
-        controller.setTopPanel(tp);
+        idlController.setTopPanel(tp);
 
         api.userInterface().registerSuiteTab("IC", tp);
 

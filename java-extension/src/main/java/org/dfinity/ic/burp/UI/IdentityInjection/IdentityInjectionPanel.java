@@ -1,7 +1,7 @@
 package org.dfinity.ic.burp.UI.IdentityInjection;
 
 import burp.api.montoya.logging.Logging;
-import org.dfinity.ic.burp.controller.ICController;
+import org.dfinity.ic.burp.controller.IdlController;
 import org.dfinity.ic.burp.model.JWKIdentity;
 
 import javax.swing.*;
@@ -11,9 +11,9 @@ public class IdentityInjectionPanel extends JPanel {
     private final Logging log;
     private final JTextArea script;
     private final JTextArea instructions;
-    private final ICController controller;
+    private final IdlController controller;
 
-    public IdentityInjectionPanel(Logging log, ICController controller) {
+    public IdentityInjectionPanel(Logging log, IdlController controller) {
         this.log = log;
         this.controller = controller;
 

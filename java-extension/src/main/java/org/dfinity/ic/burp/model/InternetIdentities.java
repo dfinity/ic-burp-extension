@@ -1,42 +1,52 @@
 package org.dfinity.ic.burp.model;
 
+import burp.api.montoya.logging.Logging;
 import org.dfinity.ic.burp.tools.IcTools;
+import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.Identity;
-import org.dfinity.ic.burp.tools.model.Principal;
 import org.dfinity.ic.burp.tools.model.RequestInfo;
 
-import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Optional;
 
 public class InternetIdentities extends AbstractTableModel {
 
     private final IcTools tools;
+    private final Logging log;
     // Maps anchor (Integer) onto pem files (String)
-    HashMap<Integer, InternetIdentity> identities = new HashMap<>();
+    HashMap<String, InternetIdentity> identities = new HashMap<>();
 
-    public InternetIdentities(IcTools tools){
+    public InternetIdentities(Logging log, IcTools tools){
+        this.log = log;
         this.tools = tools;
 
         // TODO Remove after UI testing. For testing purposes, add some dummy data.
-        identities.put(123456, "PEM CONTENTS 1");
-        identities.put(654321, "PEM CONTENTS 2");
-
+        try {
+            identities.put("123456", new InternetIdentity("Anchor", tools));
+            identities.put("654321", new InternetIdentity("Anchor", tools));
+        } catch (IcToolsException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-
-    public String addIdentity(Integer anchor){
+    public Optional<String> addIdentity(String anchor) throws IcToolsException {
         /*
         String pem = IcTools.generateEd25519Key();
         Identity identity = Identity.ed25519Identity(pem);
         String code = tools.iiAddPasskey(anchor, identity);
         identities.put(anchor, pem);
         */
+        if(identities.containsKey(anchor))
+            return Optional.empty();
+        InternetIdentity ii = new InternetIdentity(anchor, tools);
+        identities.put(anchor, ii);
         int rowAdded = identities.keySet().stream().sorted().toList().indexOf(anchor);
         this.fireTableRowsInserted(rowAdded,rowAdded);
-        return "code";
+        return ii.getCode();
     }
+
     /*
     public boolean pollIdentity(Integer anchor){
         String pem = identities.get(anchor);
@@ -60,7 +70,6 @@ public class InternetIdentities extends AbstractTableModel {
      * @return
      * TODO Should we call iiIsPasskeyRegistered to verify that the passkey is still valid?
      */
-
     public Optional<Identity> findIdentity(RequestInfo requestInfo){
         /*for(Map.Entry<Integer, String> entry : identities.entrySet()){
             Identity id = Identity.ed25519Identity(entry.getValue());
@@ -81,17 +90,31 @@ public class InternetIdentities extends AbstractTableModel {
 
     @Override
     public int getColumnCount() {
-        return 1;
+        return 5;
     }
 
     @Override
     public String getColumnName(int columnIndex) {
-        return "Anchor";
+        return switch (columnIndex) {
+            case 0 -> "Anchor";
+            case 1 -> "Code";
+            case 2 -> "Creation date";
+            case 3 -> "Is Active";
+            case 4 -> "Activation date";
+            default -> "Out of range";
+        };
     }
 
     @Override
     public Class<?> getColumnClass(int columnIndex) {
-        return Integer.class;
+        return switch (columnIndex) {
+            case 0 -> String.class;
+            case 1 -> String.class;
+            case 2 -> Date.class;
+            case 3 -> Boolean.class;
+            case 4 -> Date.class;
+            default -> String.class;
+        };
     }
 
     @Override
@@ -104,8 +127,19 @@ public class InternetIdentities extends AbstractTableModel {
         if(rowIndex > this.identities.size()){
             return "Error fetching identity.";
         }
-
-        Integer anchor = this.identities.keySet().stream().sorted().toList().get(rowIndex);
-        return anchor;
+        String anchor = this.identities.keySet().stream().sorted().toList().get(rowIndex);
+        InternetIdentity ii = this.identities.get(anchor);
+        if(ii == null){
+            this.log.logToError("Could not retrieve II in getValueAt.");
+            return "";
+        }
+        return switch (columnIndex) {
+            case 0 -> anchor;
+            case 1 -> ii.getCode().orElse("");
+            case 2 -> ii.creationDate();
+            case 3 -> ii.isActive();
+            case 4 -> ii.activationDate().orElse(new Date(0));
+            default -> "Requesting column out of range.";
+        };
     }
 }

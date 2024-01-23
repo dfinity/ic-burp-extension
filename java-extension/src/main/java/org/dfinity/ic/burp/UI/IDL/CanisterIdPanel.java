@@ -3,7 +3,7 @@ package org.dfinity.ic.burp.UI.IDL;
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import org.dfinity.ic.burp.UI.ICButton;
-import org.dfinity.ic.burp.controller.ICController;
+import org.dfinity.ic.burp.controller.IdlController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 
 import javax.swing.*;
@@ -18,9 +18,9 @@ public class CanisterIdPanel extends JPanel {
     private final Logging log;
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
     private final IDLManagementPanel idlManagementPanel;
-    private final ICController controller;
+    private final IdlController controller;
 
-    public CanisterIdPanel(Logging log, ICController controller, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, IDLManagementPanel idlManagementPanel) {
+    public CanisterIdPanel(Logging log, IdlController controller, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, IDLManagementPanel idlManagementPanel) {
         this.log = log;
         this.canisterInterfaceCache = canisterInterfaceCache;
         this.idlManagementPanel = idlManagementPanel;

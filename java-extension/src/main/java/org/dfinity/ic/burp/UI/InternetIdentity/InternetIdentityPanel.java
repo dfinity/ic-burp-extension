@@ -1,7 +1,9 @@
 package org.dfinity.ic.burp.UI.InternetIdentity;
 
 import burp.api.montoya.logging.Logging;
-import org.dfinity.ic.burp.controller.ICController;
+import org.dfinity.ic.burp.UI.ICButton;
+import org.dfinity.ic.burp.controller.IdlController;
+import org.dfinity.ic.burp.controller.IiController;
 import org.dfinity.ic.burp.model.InternetIdentities;
 
 import javax.swing.*;
@@ -10,11 +12,11 @@ import java.awt.*;
 
 public class InternetIdentityPanel extends JPanel {
     private final Logging log;
-    private final ICController controller;
+    private final IiController iiController;
 
-    public InternetIdentityPanel(Logging log, ICController controller, InternetIdentities internetIdentities) {
+    public InternetIdentityPanel(Logging log, InternetIdentities internetIdentities) {
         this.log = log;
-        this.controller = controller;
+        this.iiController = new IiController(internetIdentities, this);
 
         JTable iiTable = new JTable(internetIdentities);
 
@@ -26,7 +28,21 @@ public class InternetIdentityPanel extends JPanel {
         DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
         renderer.setHorizontalAlignment(JLabel.LEFT);
         iiTable.setDefaultRenderer(Integer.class, renderer);
+        iiTable.setDefaultRenderer(Boolean.class, renderer);
+
         this.add(iiTableScrollPane);
+        this.add(Box.createRigidArea(new Dimension(0, 5)));
+
+        JButton addIIButton = new ICButton(log, "Add", e -> {
+            iiController.addII();
+        });
+        this.add(addIIButton);
+
+        JButton removeIIButton = new ICButton(log, "Remove", e -> {
+            // TODO
+        });
+        this.add(addIIButton);
+        this.add(removeIIButton);
 
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         this.setAlignmentX(Component.LEFT_ALIGNMENT);
