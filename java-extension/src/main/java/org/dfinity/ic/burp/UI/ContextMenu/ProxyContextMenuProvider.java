@@ -71,9 +71,9 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
                 continue;
             }
 
-            String idl = info.join().getActiveCanisterInterface();
+            Optional<String> idl = info.join().getActiveCanisterInterface();
             try {
-                httpRequestList.add(req.withBody(icTools.decodeCanisterRequest(req.body().getBytes(), Optional.of(idl)).decodedRequest()));
+                httpRequestList.add(req.withBody(icTools.decodeCanisterRequest(req.body().getBytes(), idl).decodedRequest()));
 
             } catch (IcToolsException e) {
                 api.logging().logToError("Unable to request metadata for request with URI: " + req.url(), e);

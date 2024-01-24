@@ -39,7 +39,7 @@ public class IcSigning implements HttpHandler {
             if (cid.isPresent()) {
                 CompletableFuture<CanisterCacheInfo> info = this.canisterInterfaceCache.getIfPresent(cid.get());
                 if (info != null)
-                    idlopt = Optional.of(info.join().getActiveCanisterInterface());
+                    idlopt = info.join().getActiveCanisterInterface();
             }
 
             try {

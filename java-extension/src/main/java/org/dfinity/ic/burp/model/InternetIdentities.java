@@ -29,7 +29,7 @@ public class InternetIdentities extends AbstractTableModel {
         this.selectedII = Optional.empty();
     }
 
-    public Optional<String> addIdentity(String anchor) throws IcToolsException {
+    public Optional<InternetIdentity> addIdentity(String anchor) throws IcToolsException {
         if(anchor == null) return Optional.empty();
 
         if(identities.containsKey(anchor))
@@ -38,7 +38,7 @@ public class InternetIdentities extends AbstractTableModel {
         identities.put(anchor, ii);
         int rowAdded = identities.keySet().stream().sorted().toList().indexOf(anchor);
         this.fireTableRowsInserted(rowAdded,rowAdded);
-        return ii.getCode();
+        return Optional.of(ii);
     }
 
 
@@ -83,20 +83,24 @@ public class InternetIdentities extends AbstractTableModel {
     }
 
 
-    public boolean reactivateSelected() {
+    public boolean reactivateSelected() throws IcToolsException {
         InternetIdentity ii = getSelectedII();
         if (ii == null)
             return false;
 
         ii.reactivate();
 
-         return false;
+         return true;
     }
 
     public boolean removeSelected() {
         if(this.selectedII.isEmpty()) return false;
+        return this.remove(this.selectedII.get());
+    }
 
-        return this.identities.remove(this.selectedII.get()) != null;
+
+    public boolean remove(String anchor) {
+        return this.identities.remove(anchor) != null;
     }
 
     public void setSelectedIiAnchor(Optional<String> anchor){
@@ -126,7 +130,7 @@ public class InternetIdentities extends AbstractTableModel {
             case 0 -> "Anchor";
             case 1 -> "Code";
             case 2 -> "Creation date";
-            case 3 -> "Is Active";
+            case 3 -> "State";
             case 4 -> "Activation date";
             default -> "Out of range";
         };
@@ -138,7 +142,7 @@ public class InternetIdentities extends AbstractTableModel {
             case 0 -> String.class;
             case 1 -> String.class;
             case 2 -> Date.class;
-            case 3 -> Boolean.class;
+            case 3 -> String.class;
             case 4 -> Date.class;
             default -> String.class;
         };
@@ -164,7 +168,7 @@ public class InternetIdentities extends AbstractTableModel {
             case 0 -> anchor;
             case 1 -> ii.getCode().orElse("");
             case 2 -> ii.creationDate();
-            case 3 -> ii.isActive();
+            case 3 -> ii.getState().toString();
             case 4 -> ii.activationDate().orElse(new Date(0));
             default -> "Requesting column out of range.";
         };

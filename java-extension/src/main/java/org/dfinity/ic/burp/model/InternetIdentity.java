@@ -4,7 +4,6 @@ import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.Identity;
 
-import javax.swing.text.html.Option;
 import java.util.Date;
 import java.util.Optional;
 
@@ -22,15 +21,7 @@ public class InternetIdentity {
     private Optional<Date> activationDate;
     // Keeps track whether the passkey was added to the II by the user. It is possible this boolean is set to false
     // if it is detected that the passkey is no longer valid.
-    private Boolean active;
     private IiState state;
-
-    private enum IiState{
-        Initial,
-        CodeObtained,
-        Active,
-        Deactivated
-    }
 
     public InternetIdentity(String anchor, IcTools tools) throws IcToolsException {
         this.anchor = anchor;
@@ -40,8 +31,13 @@ public class InternetIdentity {
         this.code = Optional.ofNullable(tools.internetIdentityAddTentativePasskey(anchor, this.passkey));
         this.creationDate = new Date();
         this.activationDate = Optional.empty();
-        this.active = false;
+
+        // If a code was fetched, we are in the CodeObtained state, otherwise we are still in the initial state.
         this.state = code.isEmpty() ? IiState.Initial : IiState.CodeObtained;
+    }
+
+    public String getAnchor() {
+        return anchor;
     }
 
     /**
@@ -57,26 +53,9 @@ public class InternetIdentity {
      * It should not be called too often as it leads to a query call to the IC.
      */
     public void checkActivation() throws IcToolsException {
-        this.active = icTools.internetIdentityIsPasskeyRegistered(this.anchor, this.passkey);
-        if(!this.active){
-            this.activationDate = Optional.empty();
+        if(this.state == IiState.Active) {
+            this.state = icTools.internetIdentityIsPasskeyRegistered(this.anchor, this.passkey) ? IiState.Active : IiState.Deactivated;
         }
-    }
-
-
-    public boolean isActive() {
-        if(!this.active) {
-            try {
-                this.active = icTools.internetIdentityIsPasskeyRegistered(this.anchor, this.passkey);
-                if(this.active){
-                    this.activationDate = Optional.of(new Date());
-                    this.code = Optional.empty();
-                }
-            } catch (IcToolsException e){
-                return this.active;
-            }
-        }
-        return this.active;
     }
 
     public Date creationDate() {
@@ -87,7 +66,26 @@ public class InternetIdentity {
         return this.activationDate;
     }
 
-    public void reactivate() {
-        // TODO Implement
+    public IiState getState() {
+        if(this.state.equals(IiState.CodeObtained)){
+            try {
+                // TODO Make async as this is now a long blocking call. The moment one of the IIs is in CodeObtained state, the UI is slow.
+                if(icTools.internetIdentityIsPasskeyRegistered(this.anchor, this.passkey)){
+                    this.state = IiState.Active;
+                    this.activationDate = Optional.of(new Date());
+                    this.code = Optional.empty();
+                }
+            } catch (IcToolsException e) {
+
+            }
+        }
+        return this.state;
+    }
+
+    public void reactivate() throws IcToolsException {
+        this.passkey = Identity.ed25519Identity(this.icTools.generateEd25519Key());
+        this.code = Optional.ofNullable(icTools.internetIdentityAddTentativePasskey(anchor, this.passkey));
+        this.activationDate = Optional.empty();
+        this.state = IiState.CodeObtained;
     }
 }

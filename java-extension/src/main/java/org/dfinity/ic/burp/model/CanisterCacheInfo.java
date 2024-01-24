@@ -3,6 +3,7 @@ package org.dfinity.ic.burp.model;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
 
 import java.util.HashMap;
+import java.util.Optional;
 
 public class CanisterCacheInfo {
     private final HashMap<InterfaceType, String> canisterInterfaces = new HashMap<>();
@@ -19,8 +20,10 @@ public class CanisterCacheInfo {
         this.canisterInterfaces.put(type, canisterInterface);
     }
 
-    public String getActiveCanisterInterface(){
-        return canisterInterfaces.get(activeCanisterInterfaceType);
+    public Optional<String> getActiveCanisterInterface(){
+        String canisterInterface = canisterInterfaces.get(activeCanisterInterfaceType);
+
+        return canisterInterface.isBlank() ? Optional.empty() : Optional.of(canisterInterface);
     }
 
     public String getCanisterInterface(InterfaceType t){
