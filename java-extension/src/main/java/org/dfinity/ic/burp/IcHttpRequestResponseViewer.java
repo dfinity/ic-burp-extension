@@ -20,7 +20,7 @@ import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
 
-import java.awt.*;
+import java.awt.Component;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -92,7 +92,7 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
                             if (requestResponse.request().path().endsWith("/query")) {
                                 canisterInterfaceInfo = metadata.canisterMethod().map(m -> new CanisterInterfaceInfo(canisterInterface.get(), m));
                             } else { // read_state
-                                canisterInterfaceInfo = Optional.ofNullable(callRequestCache.getIfPresent(metadata.requestId())).flatMap(RequestMetadata::canisterMethod).map(m -> new CanisterInterfaceInfo(canisterInterface.get(), m));
+                                canisterInterfaceInfo = metadata.requestId().map(callRequestCache::getIfPresent).flatMap(RequestMetadata::canisterMethod).map(m -> new CanisterInterfaceInfo(canisterInterface.get(), m));
                             }
                         } else {
                             canisterInterfaceInfo = Optional.empty();
@@ -105,8 +105,7 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
                 }
                 this.requestEditor.setContents(byteArrayFactory.apply(content));
             }).join();
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             log.logToError("Exception in setRequestResponse: " + e);
         }
     }
@@ -131,8 +130,7 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
             } catch (MalformedRequestException ignored) {
             }
             return false;
-        }
-        catch(Exception e){
+        } catch (Exception e) {
             log.logToError("Exception in isEnabledFor: " + e);
             return false;
         }

@@ -187,11 +187,11 @@ class IcHttpRequestResponseViewerTest {
     public void shouldDecodeBody(String path, boolean isRequest) throws IcToolsException {
         when(request.path()).thenReturn(path);
         if (isRequest) {
-            when(tools.decodeCanisterRequest(BODY_BYTES, Optional.of("vtrom-gqaaa-aaaaq-aabia-cai"))).thenReturn(new RequestInfo(RequestType.QUERY, "123", new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), "decodedBody", Optional.empty()));
+            when(tools.decodeCanisterRequest(BODY_BYTES, Optional.of("vtrom-gqaaa-aaaaq-aabia-cai"))).thenReturn(new RequestInfo(RequestType.QUERY, Optional.of("123"), new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), "decodedBody", Optional.empty()));
         } else {
             if (path.endsWith("/read_state"))
-                callRequestCache.put("requestId", new RequestMetadata(RequestType.CALL, "requestId", new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), Optional.of("canisterMethod")));
-            when(tools.getRequestMetadata(BODY_BYTES)).thenReturn(new RequestMetadata(RequestType.CALL, "requestId", new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), Optional.of("canisterMethod")));
+                callRequestCache.put("requestId", new RequestMetadata(RequestType.CALL, Optional.of("requestId"), new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), Optional.of("canisterMethod")));
+            when(tools.getRequestMetadata(BODY_BYTES)).thenReturn(new RequestMetadata(RequestType.CALL, Optional.of("requestId"), new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), Optional.of("canisterMethod")));
             when(tools.decodeCanisterResponse(BODY_BYTES, Optional.of(new CanisterInterfaceInfo("vtrom-gqaaa-aaaaq-aabia-cai", "canisterMethod")))).thenReturn("decodedBody");
         }
 
