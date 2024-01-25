@@ -1,6 +1,10 @@
 package org.dfinity.ic.burp;
 
-import burp.api.montoya.http.handler.*;
+import burp.api.montoya.http.handler.HttpHandler;
+import burp.api.montoya.http.handler.HttpRequestToBeSent;
+import burp.api.montoya.http.handler.HttpResponseReceived;
+import burp.api.montoya.http.handler.RequestToBeSentAction;
+import burp.api.montoya.http.handler.ResponseReceivedAction;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.requests.MalformedRequestException;
 import burp.api.montoya.http.message.responses.HttpResponse;
@@ -57,7 +61,7 @@ public class IcCacheRefresh implements HttpHandler {
                     var content_length = requestToBeSent.header("Content-Length");
                     if (content_type != null && content_type.value().equals("application/cbor") && content_length != null && !content_length.value().equals("0")) {
                         var metadata = icTools.getRequestMetadata(requestToBeSent.body().getBytes());
-                        callRequestCache.put(metadata.requestId(), metadata);
+                        callRequestCache.put(metadata.requestId().orElseThrow(() -> new RuntimeException("call request does not contain request id")), metadata);
                     }
                 }
             }
