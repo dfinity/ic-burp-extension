@@ -148,7 +148,7 @@ class JnaIcToolsTest {
         var res = jnaTools.decodeCanisterRequest(queryBin, Optional.empty());
 
         assertEquals(res.type(), RequestType.QUERY);
-        assertEquals(res.requestId(), "hnB4SQO14UAhPiWVOQFXUyVsJqfv3qYV8Ol/MSFvqCo");
+        assertEquals(res.requestId().orElseThrow(), "hnB4SQO14UAhPiWVOQFXUyVsJqfv3qYV8Ol/MSFvqCo");
         assertEquals(res.senderInfo().sender(), Principal.fromText("k365o-mhgcd-4clpg-xxzxx-mqzo2-ghcqe-pl5ue-ghnfs-edgsa-wp5cl-oae"));
         assertEquals(res.senderInfo().pubkey(), Optional.of("MDwwDAYKKwYBBAGDuEMBAgMsAAoAAAAAAAAABwEBJWvlrb8tx52xOUGFcWWO6DHSAXZG6DTDxjZJuy35Zrk"));
         assertEquals(res.senderInfo().sig(), Optional.of("+s8g2QYeK2hDzYpYZfhw0O86FI6hH0fdhTwLntGvJjDmMl7WsKeeBd5O1rjKf9/uouUmx2SKhcqWHM6tJpKAsg"));
@@ -1984,7 +1984,7 @@ class JnaIcToolsTest {
             System.out.println(i);
             var res = jnaTools.decodeCanisterRequest(queryBin, Optional.empty());
             assertEquals(res.type(), RequestType.QUERY);
-            assertEquals(res.requestId(), "Wca4JtAFIbaLi7CvLamBFFLsUJCIRh6EMUkaYQ7XmgM");
+            assertEquals(res.requestId().orElseThrow(), "Wca4JtAFIbaLi7CvLamBFFLsUJCIRh6EMUkaYQ7XmgM");
             assertEquals(res.senderInfo(), new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()));
             assertEquals(res.canisterMethod(), Optional.of("http_request"));
             assertEquals(res.decodedRequest(), """

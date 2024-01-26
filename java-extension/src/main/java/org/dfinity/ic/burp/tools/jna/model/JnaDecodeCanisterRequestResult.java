@@ -26,8 +26,9 @@ public class JnaDecodeCanisterRequestResult extends Structure {
         if (error_message != null)
             throw new IcToolsException(error_message);
 
+        Optional<String> rid = request_id == null || request_id.isEmpty() ? Optional.empty() : Optional.of(request_id);
         Optional<String> method = canister_method == null || canister_method.isEmpty() ? Optional.empty() : Optional.of(canister_method);
-        return new RequestInfo(RequestType.from(request_type), request_id, JnaRequestSenderInfo.toRequestSenderInfo(sender, pubkey, sig, delegation), decoded_request, method);
+        return new RequestInfo(RequestType.from(request_type), rid, JnaRequestSenderInfo.toRequestSenderInfo(sender, pubkey, sig, delegation), decoded_request, method);
     }
 
     public static class ByValue extends JnaDecodeCanisterRequestResult implements Structure.ByValue {

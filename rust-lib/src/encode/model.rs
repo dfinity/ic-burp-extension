@@ -244,7 +244,7 @@ pub enum RequestMetadata {
         canister_method: String,
     },
     ReadState {
-        request_id: Vec<u8>,
+        request_id: Option<Vec<u8>>,
         sender_info: RequestSenderInfo,
     },
     Query {
@@ -263,7 +263,7 @@ pub enum RequestInfo {
         canister_method: String,
     },
     ReadState {
-        request_id: Vec<u8>,
+        request_id: Option<Vec<u8>>,
         sender_info: RequestSenderInfo,
         decoded_request: String,
     },

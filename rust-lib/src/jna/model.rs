@@ -53,20 +53,23 @@ impl From<EncodingResult<RequestMetadata>> for GetRequestMetadataResult {
             Ok(metadata) => {
                 let (rtype, rid, sid, cm) = match metadata {
                     RequestMetadata::Call { request_id, sender_info, canister_method } => {
-                        ("call".to_string(), request_id, sender_info, canister_method)
+                        ("call".to_string(), Some(request_id), sender_info, canister_method)
                     }
                     RequestMetadata::ReadState { request_id, sender_info } => {
                         ("read_state".to_string(), request_id, sender_info, "".to_string())
                     }
                     RequestMetadata::Query { request_id, sender_info, canister_method } => {
-                        ("query".to_string(), request_id, sender_info, canister_method)
+                        ("query".to_string(), Some(request_id), sender_info, canister_method)
                     }
                 };
 
                 GetRequestMetadataResult {
                     error_message: null(),
                     request_type: str_to_ptr(rtype),
-                    request_id: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&rid)),
+                    request_id: match rid {
+                        None => null(),
+                        Some(rid) => str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&rid))
+                    },
                     sender: str_to_ptr(sid.sender.to_text()),
                     pubkey: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&sid.pubkey.unwrap_or_default())),
                     sig: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&sid.sig.unwrap_or_default())),
@@ -109,20 +112,23 @@ impl From<EncodingResult<RequestInfo>> for DecodeCanisterRequestResult {
             Ok(info) => {
                 let (rtype, rid, sid, dreq, cm) = match info {
                     RequestInfo::Call { request_id, decoded_request, sender_info, canister_method } => {
-                        ("call".to_string(), request_id, sender_info, decoded_request, canister_method)
+                        ("call".to_string(), Some(request_id), sender_info, decoded_request, canister_method)
                     }
                     RequestInfo::ReadState { request_id, sender_info, decoded_request } => {
                         ("read_state".to_string(), request_id, sender_info, decoded_request, "".to_string())
                     }
                     RequestInfo::Query { request_id, sender_info, decoded_request, canister_method } => {
-                        ("query".to_string(), request_id, sender_info, decoded_request, canister_method)
+                        ("query".to_string(), Some(request_id), sender_info, decoded_request, canister_method)
                     }
                 };
 
                 DecodeCanisterRequestResult {
                     error_message: null(),
                     request_type: str_to_ptr(rtype),
-                    request_id: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&rid)),
+                    request_id: match rid {
+                        None => null(),
+                        Some(rid) => str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&rid))
+                    },
                     sender: str_to_ptr(sid.sender.to_text()),
                     pubkey: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&sid.pubkey.unwrap_or_default())),
                     sig: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&sid.sig.unwrap_or_default())),
