@@ -7,17 +7,14 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dfinity.ic.burp.UI.CacheLoaderSubscriber;
 import org.dfinity.ic.burp.UI.ContextMenu.ProxyContextMenuProvider;
-import org.dfinity.ic.burp.UI.InternetIdentity.IiSelectionListener;
 import org.dfinity.ic.burp.UI.TopPanel;
 import org.dfinity.ic.burp.controller.IdlController;
-import org.dfinity.ic.burp.controller.IiController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.model.InternetIdentities;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.jna.JnaIcTools;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
 
-import javax.swing.*;
 import java.util.Optional;
 
 
@@ -52,10 +49,10 @@ public class IcBurpExtension implements BurpExtension {
 
         // Register an HTTP handler that intercepts all requests to update the interface cache.
         api.http().registerHttpHandler(new IcCacheRefresh(api.logging(), icTools, canisterInterfaceCache, callRequestCache, Optional.empty(), Optional.empty()));
-        //api.http().registerHttpHandler(new IcSigning(api.logging(), icTools, canisterInterfaceCache, dataPersister.getDefaultIdentity()));
+        api.http().registerHttpHandler(new IcSigning(api.logging(), icTools, canisterInterfaceCache, internetIdentities));
 
         // Add Context Menu item to send IC requests to the repeater.
-        api.userInterface().registerContextMenuItemsProvider(new ProxyContextMenuProvider(api, icTools, canisterInterfaceCache));
+        api.userInterface().registerContextMenuItemsProvider(new ProxyContextMenuProvider(api, icTools, canisterInterfaceCache, internetIdentities));
 
         // Add a handler that stores the IDLs to Burp persistent storage (Burp project file) before unloading the extension.
         // This effectively stores the data before shutting down Burp if trigger normally.

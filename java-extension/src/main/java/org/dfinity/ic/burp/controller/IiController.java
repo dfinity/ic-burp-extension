@@ -8,7 +8,6 @@ import org.dfinity.ic.burp.model.InternetIdentity;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 
 import javax.swing.*;
-import java.util.Arrays;
 import java.util.Optional;
 
 public class IiController {
@@ -71,7 +70,7 @@ public class IiController {
         if(result){
             JOptionPane.showMessageDialog(this.internetIdentityPanel, "New activation code generated.", "Success", JOptionPane.INFORMATION_MESSAGE);
         } else {
-            JOptionPane.showMessageDialog(this.internetIdentityPanel, "Reactivation failed. Is the II in \"Add new passkey\" mode?", "Failure", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this.internetIdentityPanel, "Reactivation failed. Did you select an II and is that II in \"Add new passkey\" mode?", "Failure", JOptionPane.ERROR_MESSAGE);
 
         }
     }

@@ -1,29 +1,9 @@
 package org.dfinity.ic.burp.tools.jna;
 
-import com.sun.jna.Library;
-import com.sun.jna.Memory;
-import com.sun.jna.Native;
-import com.sun.jna.Platform;
-import com.sun.jna.Pointer;
+import com.sun.jna.*;
 import org.dfinity.ic.burp.tools.IcTools;
-import org.dfinity.ic.burp.tools.jna.model.JnaDecodeCanisterRequestResult;
-import org.dfinity.ic.burp.tools.jna.model.JnaDecodeCanisterResponseResult;
-import org.dfinity.ic.burp.tools.jna.model.JnaDiscoverCanisterInterfaceResult;
-import org.dfinity.ic.burp.tools.jna.model.JnaEncodeAndSignCanisterRequestResult;
-import org.dfinity.ic.burp.tools.jna.model.JnaGenerateEd25519KeyResult;
-import org.dfinity.ic.burp.tools.jna.model.JnaGetRequestMetadataResult;
-import org.dfinity.ic.burp.tools.jna.model.JnaIdentityInfo;
-import org.dfinity.ic.burp.tools.jna.model.JnaInternetIdentityAddTentativePasskeyResult;
-import org.dfinity.ic.burp.tools.jna.model.JnaInternetIdentityGetDelegationResult;
-import org.dfinity.ic.burp.tools.jna.model.JnaInternetIdentityGetPrincipalResult;
-import org.dfinity.ic.burp.tools.jna.model.JnaInternetIdentityIsPasskeyRegisteredResult;
-import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
-import org.dfinity.ic.burp.tools.model.DelegationInfo;
-import org.dfinity.ic.burp.tools.model.IcToolsException;
-import org.dfinity.ic.burp.tools.model.Identity;
-import org.dfinity.ic.burp.tools.model.Principal;
-import org.dfinity.ic.burp.tools.model.RequestInfo;
-import org.dfinity.ic.burp.tools.model.RequestMetadata;
+import org.dfinity.ic.burp.tools.jna.model.*;
+import org.dfinity.ic.burp.tools.model.*;
 
 import java.util.Optional;
 

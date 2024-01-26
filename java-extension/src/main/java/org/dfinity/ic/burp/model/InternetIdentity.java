@@ -1,10 +1,13 @@
 package org.dfinity.ic.burp.model;
 
 import org.dfinity.ic.burp.tools.IcTools;
+import org.dfinity.ic.burp.tools.model.DelegationInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.Identity;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 public class InternetIdentity {
@@ -15,7 +18,9 @@ public class InternetIdentity {
     // Short term ED25519 key that gets generated to re-sign a request. A delegation is obtained for this identity so
     // that this key represents the II anchor. This key and delegation needs to be generated for every origin and expires
     // by default after 30 minutes.
-    private Optional<Identity> sessionKey;
+    private Identity sessionKey;
+    // Maps each origin onto an DelegatedEd25519Identity that can sign for it.
+    private Map<String, Identity> signIdentityMap;
     private Optional<String> code;
     private final Date creationDate;
     private Optional<Date> activationDate;
@@ -27,7 +32,8 @@ public class InternetIdentity {
         this.anchor = anchor;
         this.icTools = tools;
         this.passkey = Identity.ed25519Identity(tools.generateEd25519Key());
-        this.sessionKey = Optional.empty();
+        this.sessionKey = Identity.ed25519Identity(this.icTools.generateEd25519Key());
+        this.signIdentityMap = new HashMap<>();
         this.code = Optional.ofNullable(tools.internetIdentityAddTentativePasskey(anchor, this.passkey));
         this.creationDate = new Date();
         this.activationDate = Optional.empty();
@@ -46,6 +52,25 @@ public class InternetIdentity {
      */
     public Optional<String> getCode() {
         return this.code;
+    }
+
+    public Identity getPasskey() {
+        return this.passkey;
+    }
+
+    public Optional<Identity> getSignIdentity(String origin) {
+        if(signIdentityMap.get(origin) != null) {
+            return Optional.of(signIdentityMap.get(origin));
+        }
+
+        try {
+            DelegationInfo delegationInfo = this.icTools.internetIdentityGetDelegation(anchor, passkey, origin, sessionKey);
+            Identity signIdentity = Identity.delegatedEd25519Identity(sessionKey.getPem().get(), delegationInfo);
+            signIdentityMap.put(origin, signIdentity);
+            return Optional.of(signIdentity);
+        } catch (IcToolsException e) {
+            return Optional.empty();
+        }
     }
 
     /**

@@ -5,11 +5,7 @@ import org.apache.commons.codec.binary.Base32;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.HexFormat;
-import java.util.List;
+import java.util.*;
 import java.util.zip.CRC32;
 
 public record Principal(List<Byte> id) {

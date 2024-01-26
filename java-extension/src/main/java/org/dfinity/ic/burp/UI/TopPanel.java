@@ -6,7 +6,6 @@ import org.dfinity.ic.burp.UI.IDL.IDLManagementPanel;
 import org.dfinity.ic.burp.UI.IdentityInjection.IdentityInjectionPanel;
 import org.dfinity.ic.burp.UI.InternetIdentity.InternetIdentityPanel;
 import org.dfinity.ic.burp.controller.IdlController;
-import org.dfinity.ic.burp.controller.IiController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.model.InternetIdentities;
 

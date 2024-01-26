@@ -1,13 +1,12 @@
 package org.dfinity.ic.burp.model;
 
 import burp.api.montoya.logging.Logging;
-import org.dfinity.ic.burp.UI.InternetIdentity.IiSelectionListener;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.Identity;
-import org.dfinity.ic.burp.tools.model.RequestInfo;
+import org.dfinity.ic.burp.tools.model.Principal;
+import org.dfinity.ic.burp.tools.model.RequestSenderInfo;
 
-import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import java.util.Date;
 import java.util.HashMap;
@@ -64,22 +63,46 @@ public class InternetIdentities extends AbstractTableModel {
      * principal as the one found in the sender field of the request.
      *
      * Otherwise, we return an error.
-     * @param requestInfo
-     * TODO, maybe we need to add the header as param as well.
      * @return
      * TODO Should we call iiIsPasskeyRegistered to verify that the passkey is still valid?
      */
-    public Optional<Identity> findIdentity(RequestInfo requestInfo){
-        /*for(Map.Entry<Integer, String> entry : identities.entrySet()){
-            Identity id = Identity.ed25519Identity(entry.getValue());
-            Principal principal = IcTools.iiGetPrincipal(entry.getKey(), id, request.Origin);
-            if (principal == requestInfo.senderInfo().sender()){
-                Object sessionKey = IcTools.generateEd25519Key();
-                Object delegationInfo = IcTools.iiGetDelegation(entry.getKey(), id, request.Origin, sessionKey);
-                return Optional.of(Identity.delegatedEd25519Identity(sessionKey, delegationInfo.pubkey, delegationInfo.delegation));
+    public Optional<String> findAnchor(RequestSenderInfo requestSenderInfo, String origin) {
+        if(requestSenderInfo.sender().equals(Principal.anonymous())){
+            return Optional.of("anonymous");
+        }
+
+        if(origin == null) return Optional.empty();
+
+        for(Map.Entry<String, InternetIdentity> entry : identities.entrySet()){
+            InternetIdentity ii = entry.getValue();
+            if(!ii.getState().equals(IiState.Active)){
+                continue;
             }
-        }*/
+            try {
+                Principal p = this.tools.internetIdentityGetPrincipal(entry.getKey(), ii.getPasskey(), origin);
+                if (p.equals(requestSenderInfo.sender())){
+                    return Optional.of(ii.getAnchor());
+                }
+            }
+            catch (IcToolsException e) {
+                // SignIdentity might not be registered as passkey for this II.
+                continue;
+            }
+        }
         return Optional.empty();
+    }
+
+    public Optional<Identity> findSignIdentity(String anchor, String origin) throws IcToolsException {
+        if(anchor.equals("anonymous")){
+            return Optional.of(Identity.anonymousIdentity());
+        }
+        Optional<InternetIdentity> ii = this.getIdentity(anchor);
+        if(ii.isEmpty()) return Optional.empty();
+        return ii.get().getSignIdentity(origin);
+    }
+
+    private Optional<InternetIdentity> getIdentity(String anchor) {
+        return Optional.ofNullable(this.identities.get(anchor));
     }
 
 
@@ -90,7 +113,7 @@ public class InternetIdentities extends AbstractTableModel {
 
         ii.reactivate();
 
-         return true;
+        return true;
     }
 
     public boolean removeSelected() {

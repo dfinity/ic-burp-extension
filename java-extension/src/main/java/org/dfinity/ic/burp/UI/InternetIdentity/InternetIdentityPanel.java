@@ -2,10 +2,8 @@ package org.dfinity.ic.burp.UI.InternetIdentity;
 
 import burp.api.montoya.logging.Logging;
 import org.dfinity.ic.burp.UI.ICButton;
-import org.dfinity.ic.burp.controller.IdlController;
 import org.dfinity.ic.burp.controller.IiController;
 import org.dfinity.ic.burp.model.InternetIdentities;
-import org.dfinity.ic.burp.tools.model.InterfaceType;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;

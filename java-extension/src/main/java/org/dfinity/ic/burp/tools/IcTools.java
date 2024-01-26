@@ -1,12 +1,6 @@
 package org.dfinity.ic.burp.tools;
 
-import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
-import org.dfinity.ic.burp.tools.model.DelegationInfo;
-import org.dfinity.ic.burp.tools.model.IcToolsException;
-import org.dfinity.ic.burp.tools.model.Identity;
-import org.dfinity.ic.burp.tools.model.Principal;
-import org.dfinity.ic.burp.tools.model.RequestInfo;
-import org.dfinity.ic.burp.tools.model.RequestMetadata;
+import org.dfinity.ic.burp.tools.model.*;
 
 import java.util.Optional;
 

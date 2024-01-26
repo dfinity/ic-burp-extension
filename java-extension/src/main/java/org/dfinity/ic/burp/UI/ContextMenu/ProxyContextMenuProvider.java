@@ -1,4 +1,5 @@
 package org.dfinity.ic.burp.UI.ContextMenu;
+
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.http.message.HttpHeader;
 import burp.api.montoya.http.message.HttpRequestResponse;
@@ -9,8 +10,10 @@ import burp.api.montoya.ui.contextmenu.MessageEditorHttpRequestResponse;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import org.dfinity.ic.burp.IcHttpRequestResponseViewer;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
+import org.dfinity.ic.burp.model.InternetIdentities;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
+import org.dfinity.ic.burp.tools.model.RequestInfo;
 
 import javax.swing.*;
 import java.awt.*;
@@ -24,11 +27,13 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
     private final MontoyaApi api;
     private final IcTools icTools;
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
+    private final InternetIdentities internetIdentities;
 
-    public ProxyContextMenuProvider(MontoyaApi api, IcTools icTools, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache) {
+    public ProxyContextMenuProvider(MontoyaApi api, IcTools icTools, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, InternetIdentities internetIdentities) {
         this.api = api;
         this.icTools = icTools;
         this.canisterInterfaceCache = canisterInterfaceCache;
+        this.internetIdentities = internetIdentities;
     }
 
     @Override
@@ -66,14 +71,18 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
                 continue;
             }
 
-            CompletableFuture<CanisterCacheInfo> info = canisterInterfaceCache.getIfPresent(cid.get());
-            if (info == null) {
+            CompletableFuture<CanisterCacheInfo> canisterCacheInfo = canisterInterfaceCache.getIfPresent(cid.get());
+            if (canisterCacheInfo == null) {
                 continue;
             }
 
-            Optional<String> idl = info.join().getActiveCanisterInterface();
+            Optional<String> idl = canisterCacheInfo.join().getActiveCanisterInterface();
             try {
-                httpRequestList.add(req.withBody(icTools.decodeCanisterRequest(req.body().getBytes(), idl).decodedRequest()));
+                RequestInfo requestInfo = icTools.decodeCanisterRequest(req.body().getBytes(), idl);
+                Optional<String> anchor = internetIdentities.findAnchor(requestInfo.senderInfo(), req.headerValue("Origin"));
+                req = req.withAddedHeader("x-ic-decoded", "True");
+                req = req.withAddedHeader("x-ic-sign-identity", anchor.orElse(""));
+                httpRequestList.add(req.withBody(requestInfo.decodedRequest()));
 
             } catch (IcToolsException e) {
                 api.logging().logToError("Unable to request metadata for request with URI: " + req.url(), e);
@@ -89,7 +98,6 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
 
             for(HttpRequest r : httpRequestList){
                 // This header is added to easily detect which outgoing requests need to be re-encoded and resigned.
-                r = r.withAddedHeader("IC-Decoded", "True");
                 api.repeater().sendToRepeater(r);
             }
         });

@@ -87,6 +87,10 @@ public class Identity {
         return delegationInfo.map(x -> x.delegationInfo.delegationChain());
     }
 
+    public Optional<String> getPem() {
+        return pem;
+    }
+
     private record InternalDelegationInfo(Identity delegationTarget, DelegationInfo delegationInfo) {
     }
 }
