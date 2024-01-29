@@ -15,9 +15,9 @@ public class InternetIdentityPanel extends JPanel {
     private final IiController iiController;
     private final JTable iiTable;
 
-    public InternetIdentityPanel(Logging log, InternetIdentities internetIdentities) {
+    public InternetIdentityPanel(Logging log, IiController iiController, InternetIdentities internetIdentities) {
         this.log = log;
-        this.iiController = new IiController(log, internetIdentities, this);
+        this.iiController = iiController;
 
         iiTable = new JTable(internetIdentities);
         iiTable.getSelectionModel().addListSelectionListener(new IiSelectionListener(log, internetIdentities, this));

@@ -8,6 +8,7 @@ import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
 import burp.api.montoya.ui.contextmenu.MessageEditorHttpRequestResponse;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import org.dfinity.ic.burp.IcBurpExtension;
 import org.dfinity.ic.burp.IcHttpRequestResponseViewer;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.model.InternetIdentities;
@@ -21,6 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+
+import static org.dfinity.ic.burp.IcBurpExtension.IC_DECODED_HEADER_NAME;
+import static org.dfinity.ic.burp.IcBurpExtension.IC_SIGN_IDENTITY_HEADER_NAME;
 
 
 public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
@@ -80,8 +84,8 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
             try {
                 RequestInfo requestInfo = icTools.decodeCanisterRequest(req.body().getBytes(), idl);
                 Optional<String> anchor = internetIdentities.findAnchor(requestInfo.senderInfo(), req.headerValue("Origin"));
-                req = req.withAddedHeader("x-ic-decoded", "True");
-                req = req.withAddedHeader("x-ic-sign-identity", anchor.orElse(""));
+                req = req.withAddedHeader(IC_DECODED_HEADER_NAME, "True");
+                req = req.withAddedHeader(IC_SIGN_IDENTITY_HEADER_NAME, anchor.orElse(""));
                 httpRequestList.add(req.withBody(requestInfo.decodedRequest()));
 
             } catch (IcToolsException e) {
@@ -93,17 +97,25 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
             // This returns an empty list of menu items.
             return ContextMenuItemsProvider.super.provideMenuItems(event);
 
-        JMenuItem menuItem = new JMenuItem("Send to repeater (IC Decoded)");
-        menuItem.addActionListener(l -> {
-
+        JMenuItem menuItemRepeater = new JMenuItem("Send to repeater (IC Decoded)");
+        menuItemRepeater.addActionListener(l -> {
             for(HttpRequest r : httpRequestList){
                 // This header is added to easily detect which outgoing requests need to be re-encoded and resigned.
                 api.repeater().sendToRepeater(r);
             }
         });
 
+        JMenuItem menuItemIntruder = new JMenuItem("Send to intruder (IC Decoded)");
+        menuItemIntruder.addActionListener(l -> {
+            for(HttpRequest r : httpRequestList){
+                // This header is added to easily detect which outgoing requests need to be re-encoded and resigned.
+                api.intruder().sendToIntruder(r);
+            }
+        });
+
         List<Component> menuItemList = new ArrayList<>();
-        menuItemList.add(menuItem);
+        menuItemList.add(menuItemRepeater);
+        menuItemList.add(menuItemIntruder);
         return menuItemList;
     }
 }

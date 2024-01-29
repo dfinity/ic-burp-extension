@@ -15,6 +15,9 @@ import org.dfinity.ic.burp.tools.model.Identity;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import static org.dfinity.ic.burp.IcBurpExtension.IC_DECODED_HEADER_NAME;
+import static org.dfinity.ic.burp.IcBurpExtension.IC_SIGN_IDENTITY_HEADER_NAME;
+
 public class IcSigning implements HttpHandler {
     private final Logging log;
     private final IcTools icTools;
@@ -37,12 +40,12 @@ public class IcSigning implements HttpHandler {
      */
     @Override
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent requestToBeSent) {
-        if(!requestToBeSent.toolSource().isFromTool(ToolType.REPEATER)) {
+        if(!requestToBeSent.toolSource().isFromTool(ToolType.REPEATER) && !requestToBeSent.toolSource().isFromTool(ToolType.INTRUDER)) {
             return RequestToBeSentAction.continueWith(requestToBeSent);
         }
 
         log.logToOutput("IcSigning.handleHttpRequestToBeSent - From Proxy with x-ic-decoded: " + requestToBeSent.header("x-ic-decoded").value());
-        if(!requestToBeSent.header("x-ic-decoded").value().equals("True")) return RequestToBeSentAction.continueWith(requestToBeSent);
+        if(!requestToBeSent.header(IC_DECODED_HEADER_NAME).value().equals("True")) return RequestToBeSentAction.continueWith(requestToBeSent);
 
         Optional<String> cid = IcHttpRequestResponseViewer.getCanisterId(requestToBeSent.path());
         Optional<String> idlopt = Optional.empty();
@@ -53,7 +56,7 @@ public class IcSigning implements HttpHandler {
         }
 
         try {
-            String anchor = requestToBeSent.header("x-ic-sign-identity").value();
+            String anchor = requestToBeSent.header(IC_SIGN_IDENTITY_HEADER_NAME).value();
             if(anchor.isBlank()){
                 // Either the original request wasn't signed with an II or the II was not onboarded to the plugin yet.
                 // Retry to find the II in case the user removed the header.
@@ -78,8 +81,8 @@ public class IcSigning implements HttpHandler {
 
             byte[] newBody = icTools.encodeAndSignCanisterRequest(requestToBeSent.bodyToString(), idlopt, id.get());
             log.logToOutput("IcSigning.handleHttpRequestToBeSent - Sending signed and encoded request with new body: " + newBody);
-            HttpRequest req = requestToBeSent.withRemovedHeader("x-ic-sign-identity");
-            req = req.withRemovedHeader("x-ic-decoded");
+            HttpRequest req = requestToBeSent.withRemovedHeader(IC_SIGN_IDENTITY_HEADER_NAME);
+            req = req.withRemovedHeader(IC_DECODED_HEADER_NAME);
             req = req.withBody(ByteArray.byteArray(newBody));
             log.logToOutput("Request to be sent: \n" + req);
             return RequestToBeSentAction.continueWith(req);

@@ -9,6 +9,7 @@ import org.dfinity.ic.burp.UI.CacheLoaderSubscriber;
 import org.dfinity.ic.burp.UI.ContextMenu.ProxyContextMenuProvider;
 import org.dfinity.ic.burp.UI.TopPanel;
 import org.dfinity.ic.burp.controller.IdlController;
+import org.dfinity.ic.burp.controller.IiController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.model.InternetIdentities;
 import org.dfinity.ic.burp.tools.IcTools;
@@ -20,6 +21,8 @@ import java.util.Optional;
 
 public class IcBurpExtension implements BurpExtension {
 
+    public static final String IC_DECODED_HEADER_NAME = "x-ic-decoded";
+    public static final String IC_SIGN_IDENTITY_HEADER_NAME = "x-ic-sign-identity";
     private AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
     private InternetIdentities internetIdentities;
 
@@ -42,9 +45,11 @@ public class IcBurpExtension implements BurpExtension {
 
         // Create top level UI component and have the loader delegate notifications to it to update the UI accordingly.
         IdlController idlController = new IdlController(api.logging(), canisterInterfaceCache, dataPersister, icTools);
-        TopPanel tp = new TopPanel(api.logging(), canisterInterfaceCache, idlController, this.internetIdentities);
+        IiController iiController = new IiController(api.logging(), internetIdentities);
+        TopPanel tp = new TopPanel(api.logging(), canisterInterfaceCache, idlController, iiController, this.internetIdentities);
         l.setDelegate(tp);
         idlController.setTopPanel(tp);
+        iiController.setTopPanel(tp);
 
         api.userInterface().registerSuiteTab("IC", tp);
 

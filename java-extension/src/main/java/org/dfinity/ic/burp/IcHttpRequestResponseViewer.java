@@ -2,6 +2,7 @@ package org.dfinity.ic.burp;
 
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.ByteArray;
+import burp.api.montoya.http.message.HttpHeader;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.requests.MalformedRequestException;
@@ -116,6 +117,11 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
         try {
             if (requestResponse.request() == null || (!isRequest && !requestResponse.hasResponse()))
                 return false;
+
+            HttpHeader icDecodedHeader = requestResponse.request().header(IcBurpExtension.IC_DECODED_HEADER_NAME);
+            if (icDecodedHeader != null && icDecodedHeader.value().equals("True")) {
+                return false;
+            }
 
             try {
                 var path = requestResponse.request().path();
