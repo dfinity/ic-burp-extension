@@ -42,6 +42,18 @@ public class InternetIdentity {
         this.state = code.isEmpty() ? IiState.Initial : IiState.CodeObtained;
     }
 
+    public InternetIdentity(String anchor, IcTools tools, IiState state, String passKeyPem, Date creationDate, Date activationDate) throws IcToolsException {
+        this.anchor = anchor;
+        this.icTools = tools;
+        this.passkey = Identity.ed25519Identity(passKeyPem);
+        this.sessionKey = Identity.ed25519Identity(this.icTools.generateEd25519Key());
+        this.signIdentityMap = new HashMap<>();
+        this.code = Optional.empty();
+        this.creationDate = creationDate;
+        this.activationDate = Optional.ofNullable(activationDate);
+        this.state = state;
+    }
+
     public String getAnchor() {
         return anchor;
     }

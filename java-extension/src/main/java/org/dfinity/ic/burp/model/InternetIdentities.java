@@ -28,6 +28,10 @@ public class InternetIdentities extends AbstractTableModel {
         this.selectedII = Optional.empty();
     }
 
+    public HashMap<String, InternetIdentity> getIdentities() {
+        return identities;
+    }
+
     public Optional<InternetIdentity> addIdentity(String anchor) throws IcToolsException {
         if(anchor == null) return Optional.empty();
 
@@ -38,6 +42,18 @@ public class InternetIdentities extends AbstractTableModel {
         int rowAdded = identities.keySet().stream().sorted().toList().indexOf(anchor);
         this.fireTableRowsInserted(rowAdded,rowAdded);
         return Optional.of(ii);
+    }
+
+    /**
+     * Used to create an existing II from storage.
+     * @param anchor
+     * @param passKeyPem
+     * @param creationDate
+     * @param activationDate
+     */
+    public void addIdentity(String anchor, String passKeyPem, IiState state, Date creationDate, Date activationDate) throws IcToolsException {
+        InternetIdentity ii = new InternetIdentity(anchor, this.tools, state, passKeyPem, creationDate, activationDate);
+        identities.put(anchor, ii);
     }
 
 

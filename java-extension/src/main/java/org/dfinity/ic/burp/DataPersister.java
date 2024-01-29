@@ -6,16 +6,25 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.nimbusds.jose.JOSEException;
 import org.dfinity.ic.burp.UI.CacheLoaderSubscriber;
-import org.dfinity.ic.burp.model.CanisterCacheInfo;
-import org.dfinity.ic.burp.model.JWKIdentity;
+import org.dfinity.ic.burp.model.*;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
 
+import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
 
 public class DataPersister {
+    public static final String IDENTITIES_KEY = "Identities";
+    public static final String CANISTER_INTERFACE_CACHE_KEY = "CanisterInterfaceCache";
+    public static final String IC_KEY = "IC";
+    public static final String IDL_KEY = "IDL";
+    public static final String ACTIVE_CANISTER_INTERFACE_TYPE_KEY = "ActiveCanisterInterfaceType";
+    public static final String ACTIVATION_DATE_KEY = "ActivationDate";
+    public static final String CREATION_DATE_KEY = "CreationDate";
+    public static final String PASSKEY_KEY = "Passkey";
+    public static final String STATE_KEY = "State";
     private PersistedObject rootPO;
     private IcTools icTools;
     private Logging log;
@@ -54,10 +63,10 @@ public class DataPersister {
                     }
             );
         log.logToOutput("rootPO child object keys: " + rootPO.childObjectKeys());
-        PersistedObject icObject = rootPO.getChildObject("IC");
-        if(icObject == null) return cache;
-        log.logToOutput("icObject child object keys: " + icObject.childObjectKeys());
-        PersistedObject canisterInterfaceCachePO =  icObject.getChildObject("CanisterInterfaceCache");
+        PersistedObject icPO = rootPO.getChildObject(IC_KEY);
+        if(icPO == null) return cache;
+        log.logToOutput("icPO child object keys: " + icPO.childObjectKeys());
+        PersistedObject canisterInterfaceCachePO =  icPO.getChildObject(CANISTER_INTERFACE_CACHE_KEY);
         if(canisterInterfaceCachePO == null) return cache;
 
         log.logToOutput("Adding the following CIDs to cache from persistent storage: \n" + canisterInterfaceCachePO.childObjectKeys());
@@ -67,9 +76,9 @@ public class DataPersister {
             if(canisterCacheInfoPO == null) continue; // This shouldn't happen as we just fetched the available keys.
             CanisterCacheInfo info = new CanisterCacheInfo();
 
-            log.logToOutput("ActiveCanisterInterfaceType from storage: " + canisterCacheInfoPO.getString("ActiveCanisterInterfaceType"));
+            log.logToOutput("ActiveCanisterInterfaceType from storage: " + canisterCacheInfoPO.getString(ACTIVE_CANISTER_INTERFACE_TYPE_KEY));
             try {
-                InterfaceType type = InterfaceType.valueOf(canisterCacheInfoPO.getString("ActiveCanisterInterfaceType"));
+                InterfaceType type = InterfaceType.valueOf(canisterCacheInfoPO.getString(ACTIVE_CANISTER_INTERFACE_TYPE_KEY));
                 info.setActiveCanisterInterfaceType(type);
             } catch (Exception e){
                 log.logToError("Active canister interface type could not be deserialized to enum.", e);
@@ -78,7 +87,7 @@ public class DataPersister {
             for(String type: canisterCacheInfoPO.childObjectKeys()){
                 PersistedObject canisterInterfacePO = canisterCacheInfoPO.getChildObject(type);
                 if(canisterInterfacePO == null) continue; // This shouldn't happen as we just fetched the available keys.
-                String idl = canisterInterfacePO.getString("IDL");
+                String idl = canisterInterfacePO.getString(IDL_KEY);
                 idl = idl == null  ? "" : idl;
                 try {
                     info.putCanisterInterface(idl, InterfaceType.valueOf(type));
@@ -98,12 +107,12 @@ public class DataPersister {
          BurpRoot (PersistedObject)
                     |
                     |
-         ICObject (PersistedObject)
-                    |
-                    |
-        CanisterInterfaceCache (PersistedObject)
-                    |
-                    |   Key = CID
+         ICObject (PersistedObject) ---------------------------------
+                    |                                               |
+                    |                                               |
+        CanisterInterfaceCache (PersistedObject)                Identities (PersistedObject)
+                    |                                               |
+                    |   Key = CID                                  ... (See storeInternetIdentities)
                     |
             CanisterCacheInfo (PersistedObject): Each such persisted object will have the activeCanisterInterfaceType serialized to a String.
                     |                            The key for activeCanisterInterfaceType is "ActiveCanisterInterfaceType".
@@ -117,16 +126,18 @@ public class DataPersister {
         */
 
         log.logToOutput("Storing IDLs to Burp project file.");
-        PersistedObject canisterInterfaceCachePO = generatePOTree(rootPO);
+        generatePOTree();
+        PersistedObject icPO = this.rootPO.getChildObject(IC_KEY);
+        PersistedObject canisterInterfaceCachePO = icPO.getChildObject(CANISTER_INTERFACE_CACHE_KEY);
 
         for(Map.Entry<String, CanisterCacheInfo> cacheEntry : cache.synchronous().asMap().entrySet()){
             PersistedObject canisterCacheInfoPO = PersistedObject.persistedObject();
             CanisterCacheInfo info = cacheEntry.getValue();
-            canisterCacheInfoPO.setString("ActiveCanisterInterfaceType", info.getActiveCanisterInterfaceType().name());
+            canisterCacheInfoPO.setString(ACTIVE_CANISTER_INTERFACE_TYPE_KEY, info.getActiveCanisterInterfaceType().name());
 
             for(Map.Entry<InterfaceType, String> canisterInterface : info.getCanisterInterfaces().entrySet()){
                 PersistedObject canisterInterfacePO = PersistedObject.persistedObject();
-                canisterInterfacePO.setString("IDL", canisterInterface.getValue());
+                canisterInterfacePO.setString(IDL_KEY, canisterInterface.getValue());
                 canisterCacheInfoPO.setChildObject(canisterInterface.getKey().name(), canisterInterfacePO);
             }
             canisterInterfaceCachePO.setChildObject(cacheEntry.getKey(), canisterCacheInfoPO);
@@ -136,19 +147,23 @@ public class DataPersister {
 
     public boolean clearCanisterInterfaceCache(){
         PersistedObject icPO = PersistedObject.persistedObject();
-        this.rootPO.setChildObject("IC", icPO);
+        this.rootPO.setChildObject(IC_KEY, icPO);
         return true;
     }
 
-    private PersistedObject generatePOTree(PersistedObject root){
-        PersistedObject icPO = PersistedObject.persistedObject();
+    private void generatePOTree(){
+        PersistedObject icPO = this.rootPO.getChildObject(IC_KEY);
+        if(icPO == null) icPO = PersistedObject.persistedObject();
 
-        PersistedObject canisterInterfaceCachePO = PersistedObject.persistedObject();
-        icPO.setChildObject("CanisterInterfaceCache", canisterInterfaceCachePO);
+        PersistedObject canisterInterfaceCachePO = icPO.getChildObject(CANISTER_INTERFACE_CACHE_KEY);
+        if(canisterInterfaceCachePO == null) canisterInterfaceCachePO = PersistedObject.persistedObject();
+        icPO.setChildObject(CANISTER_INTERFACE_CACHE_KEY, canisterInterfaceCachePO);
 
-        this.rootPO.setChildObject("IC", icPO);
+        PersistedObject iiPo = icPO.getChildObject(IDENTITIES_KEY);
+        if(iiPo == null) iiPo = PersistedObject.persistedObject();
+        icPO.setChildObject(IDENTITIES_KEY, iiPo);
 
-        return canisterInterfaceCachePO;
+        this.rootPO.setChildObject(IC_KEY, icPO);
     }
 
     public JWKIdentity getDefaultIdentity() {
@@ -163,5 +178,103 @@ public class DataPersister {
         }
 
         return this.defaultIdentity;
+    }
+
+    public boolean storeInternetIdentities(InternetIdentities identities) {
+        /* The strategy is to create a new PersistedObject.
+           Overall, the data structure looks like a tree:
+
+                                             BurpRoot (PersistedObject)
+                                                        |
+                                                        |
+                                             ICObject (PersistedObject)-----------------------
+                                                        |                                    |
+                                                        |                                    |
+                                                Identities (PersistedObject)     CanisterInterfaceCache (PersistedObject)
+                                                        |                                    |
+                                                        |   Key = Anchor                    ... (See storeCanisterInterfaceCache)
+                                                        |
+                                              II (PersistedObject)
+                                                        |
+                     -----------------------------------|------------------------------------------
+                     |                    |                           |                           |
+         Key="State" |      Key="Passkey" |        Key="CreationDate" |      Key="ActivationDate" |
+         Type=String |      Type=String   |        Type=Long          |      Type=Long            |
+                     |                    |                           |                           |
+       Name of the IiState enum   Pem file of the passkey    Date II was created      Date the passkey was activated
+                                                                                      and not present if not yet activated.
+        */
+        log.logToOutput("Storing identities to Burp project file.");
+
+        generatePOTree();
+        PersistedObject icPO = this.rootPO.getChildObject(IC_KEY);
+        PersistedObject identitiesPO = icPO.getChildObject(IDENTITIES_KEY);
+
+        for(Map.Entry<String, InternetIdentity> iiEntry : identities.getIdentities().entrySet()) {
+            log.logToOutput("Storing identities with anchor: " + iiEntry.getKey());
+            PersistedObject iiPO = PersistedObject.persistedObject();
+            InternetIdentity ii = iiEntry.getValue();
+
+            iiPO.setString(STATE_KEY, ii.getState().name());
+            log.logToOutput("Storing identities with PersistedObject.childObjectKeys: " + iiPO.childObjectKeys());
+            // The pem file of a passkey should never be empty.
+            iiPO.setString(PASSKEY_KEY, ii.getPasskey().getPem().orElseThrow());
+            log.logToOutput("Storing identities with PersistedObject.childObjectKeys: " + iiPO.childObjectKeys());
+            iiPO.setLong(CREATION_DATE_KEY, ii.creationDate().getTime());
+            log.logToOutput("Storing identities with PersistedObject.childObjectKeys: " + iiPO.childObjectKeys());
+            Optional<Date> activationDate = ii.activationDate();
+            activationDate.ifPresent(date -> iiPO.setLong(ACTIVATION_DATE_KEY, date.getTime()));
+            log.logToOutput("Storing identities with PersistedObject.childObjectKeys: " + iiPO.childObjectKeys());
+            log.logToOutput("Adding identity with: ("
+                    + iiEntry.getKey() + ", "
+                    + ii.getPasskey().getPem().orElseThrow() + ", "
+                    + ii.getState().name() + ", "
+                    + ii.creationDate() + ", "
+                    + activationDate + ")");
+
+            log.logToOutput("Storing identities with PersistedObject: " + iiPO);
+            identitiesPO.setChildObject(iiEntry.getKey(), iiPO);
+        }
+        return true;
+    }
+    public InternetIdentities getInternetIdentities() {
+        InternetIdentities identities = new InternetIdentities(this.log, this.icTools);
+
+        log.logToOutput("rootPO child object keys: " + rootPO.childObjectKeys());
+        PersistedObject icPO = rootPO.getChildObject(IC_KEY);
+        if(icPO == null) return identities;
+
+        log.logToOutput("icPO child object keys: " + icPO.childObjectKeys());
+        PersistedObject identitiesPO =  icPO.getChildObject(IDENTITIES_KEY);
+        if(identitiesPO == null) return identities;
+
+        log.logToOutput("Adding the following anchors to identities from persistent storage: \n" + identitiesPO.childObjectKeys());
+
+        for (String anchor : identitiesPO.childObjectKeys()) {
+            PersistedObject iiPO = identitiesPO.getChildObject(anchor);
+            if(iiPO == null) continue; // This shouldn't happen as we just fetched the available keys.
+
+            IiState state;
+            try {
+                state = IiState.valueOf(iiPO.getString(STATE_KEY));
+            } catch (IllegalArgumentException e){
+                // This can happen if the persistent storage was changed manually or if a iiState name was changed or removed.
+                this.log.logToError("Could not find IiState with anchor " + anchor + " and state: " + iiPO.getString(STATE_KEY));
+                continue;
+            }
+
+            String passKeyPem = iiPO.getString(PASSKEY_KEY);
+            Date creationDate = new Date(iiPO.getLong(CREATION_DATE_KEY));
+            Long activationDateLong = iiPO.getLong(ACTIVATION_DATE_KEY);
+            Date activationDate = activationDateLong == null ? null : new Date(activationDateLong);
+
+            try {
+                this.log.logToOutput("Adding identity with: (" + anchor + ", " + passKeyPem + ", " + state + ", " + creationDate + ", " + activationDate + ")");
+                identities.addIdentity(anchor, passKeyPem, state, creationDate, activationDate);
+            } catch (IcToolsException e) {
+                this.log.logToError("Could not create InternetIdentity with anchor " + anchor + "\nException: " + e);
+            }
+        }
+        return identities;
     }
 }

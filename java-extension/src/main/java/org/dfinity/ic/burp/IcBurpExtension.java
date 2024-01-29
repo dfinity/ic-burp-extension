@@ -28,11 +28,12 @@ public class IcBurpExtension implements BurpExtension {
         api.extension().setName("IC Burp Extension " + Optional.of(getClass()).map(Class::getPackage).map(Package::getImplementationVersion).orElse("DEV"));
 
         IcTools icTools = new JnaIcTools();
-        this.internetIdentities = new InternetIdentities(api.logging(), icTools);
 
         CacheLoaderSubscriber l = new CacheLoaderSubscriber();
         DataPersister dataPersister = new DataPersister(api.logging(), icTools, api.persistence().extensionData(), l);
         canisterInterfaceCache = dataPersister.getCanisterInterfaceCache();
+        this.internetIdentities = dataPersister.getInternetIdentities();
+
 
         Cache<String, RequestMetadata> callRequestCache = Caffeine.newBuilder().maximumSize(10_000).build();
         var viewerProvider = new IcHttpRequestResponseViewerProvider(api, icTools, canisterInterfaceCache, callRequestCache);
@@ -57,5 +58,6 @@ public class IcBurpExtension implements BurpExtension {
         // Add a handler that stores the IDLs to Burp persistent storage (Burp project file) before unloading the extension.
         // This effectively stores the data before shutting down Burp if trigger normally.
         api.extension().registerUnloadingHandler(() -> dataPersister.storeCanisterInterfaceCache(canisterInterfaceCache));
+        api.extension().registerUnloadingHandler(() -> dataPersister.storeInternetIdentities(internetIdentities));
     }
 }
