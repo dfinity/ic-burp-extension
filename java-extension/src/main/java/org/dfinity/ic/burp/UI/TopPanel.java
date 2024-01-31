@@ -3,7 +3,6 @@ package org.dfinity.ic.burp.UI;
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import org.dfinity.ic.burp.UI.IDL.IDLManagementPanel;
-import org.dfinity.ic.burp.UI.IdentityInjection.IdentityInjectionPanel;
 import org.dfinity.ic.burp.UI.InternetIdentity.InternetIdentityPanel;
 import org.dfinity.ic.burp.controller.IdlController;
 import org.dfinity.ic.burp.controller.IiController;
@@ -15,21 +14,22 @@ import javax.swing.*;
 
 public class TopPanel extends JTabbedPane {
     private final IDLManagementPanel idlManagementPanel;
-    private final IdentityInjectionPanel identityInjectionPanel;
+    //private final IdentityInjectionPanel identityInjectionPanel;
     private final Logging log;
-    private final IdlController idlController;
     private final InternetIdentityPanel internetIdentityPanel;
 
     public TopPanel(Logging log, AsyncLoadingCache<String, CanisterCacheInfo>  canisterInterfaceCache, IdlController idlController, IiController iiController, InternetIdentities internetIdentities) {
-        this.idlController = idlController;
-        this.idlManagementPanel = new IDLManagementPanel(log, idlController, canisterInterfaceCache);
-        this.identityInjectionPanel = new IdentityInjectionPanel(log, idlController);
-        this.internetIdentityPanel = new InternetIdentityPanel(log, iiController, internetIdentities);
         this.log = log;
-        this.add("IDL Management", idlManagementPanel);
-        this.add("Identity Injection", identityInjectionPanel);
-        this.add("Internet Identity", internetIdentityPanel);
 
+        this.idlManagementPanel = new IDLManagementPanel(log, idlController, canisterInterfaceCache);
+        this.add("IDL Management", idlManagementPanel);
+
+        // Currently this key is never used and this complete feature can only be implemented once agent-js and agent-rs used the same curve.
+        // this.identityInjectionPanel = new IdentityInjectionPanel(log, idlController);
+        // this.add("Identity Injection", identityInjectionPanel);
+
+        this.internetIdentityPanel = new InternetIdentityPanel(log, iiController, internetIdentities);
+        this.add("Internet Identity", internetIdentityPanel);
     }
 
     /**
@@ -61,11 +61,17 @@ public class TopPanel extends JTabbedPane {
     }
 
     public OkOrCancel showOkOrCancelMessage(String message, String title) {
-        switch (JOptionPane.showConfirmDialog(this, message, title, JOptionPane.OK_CANCEL_OPTION)) {
-            case JOptionPane.CANCEL_OPTION:
-                return OkOrCancel.CANCEL;
-            default:
-                return OkOrCancel.OK;
+        if (JOptionPane.showConfirmDialog(this, message, title, JOptionPane.OK_CANCEL_OPTION) == JOptionPane.CANCEL_OPTION) {
+            return OkOrCancel.CANCEL;
         }
+        return OkOrCancel.OK;
+    }
+
+    public String getUserInput(String message, String initialValue) {
+        return JOptionPane.showInputDialog(this, message, initialValue);
+    }
+
+    public void reloadIdlFromSelection() {
+        this.idlManagementPanel.reloadIdlFromSelection();
     }
 }

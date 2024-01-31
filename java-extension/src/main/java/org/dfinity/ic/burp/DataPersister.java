@@ -25,10 +25,10 @@ public class DataPersister {
     public static final String CREATION_DATE_KEY = "CreationDate";
     public static final String PASSKEY_KEY = "Passkey";
     public static final String STATE_KEY = "State";
-    private PersistedObject rootPO;
-    private IcTools icTools;
-    private Logging log;
-    private CacheLoaderSubscriber cacheLoaderSubscriber;
+    private final PersistedObject rootPO;
+    private final IcTools icTools;
+    private final Logging log;
+    private final CacheLoaderSubscriber cacheLoaderSubscriber;
     private JWKIdentity defaultIdentity;
 
 
@@ -52,11 +52,11 @@ public class DataPersister {
                         try {
                             Optional<String> idlOpt = icTools.discoverCanisterInterface(cid);
                             InterfaceType t = idlOpt.isPresent() ? InterfaceType.AUTOMATIC : InterfaceType.FAILED;
-                            String idl = idlOpt.orElse("FAILED");
+                            String idl = idlOpt.orElse("");
                             val = new CanisterCacheInfo(idl, t);
                         } catch (IcToolsException e) {
                             log.logToError(String.format("discoverCanisterInterface failed for canisterId %s", cid), e);
-                            val = new CanisterCacheInfo("FAILED", InterfaceType.FAILED);
+                            val = new CanisterCacheInfo("", InterfaceType.FAILED);
                         }
                         cacheLoaderSubscriber.onCacheLoad();
                         return val;
@@ -167,8 +167,8 @@ public class DataPersister {
     }
 
     public JWKIdentity getDefaultIdentity() {
-        // TODO Add storing the JWK Identity to icObject
-        PersistedObject icObject = rootPO.getChildObject("IC");
+        // TODO The default JWK Identity is not yet persisted. A new one is generated when loading the extension.
+        // PersistedObject icObject = rootPO.getChildObject("IC");
 
         try {
             this.defaultIdentity = new JWKIdentity(log);

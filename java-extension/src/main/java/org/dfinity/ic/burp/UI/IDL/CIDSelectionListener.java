@@ -24,8 +24,7 @@ public class CIDSelectionListener implements ListSelectionListener {
         if(e.getValueIsAdjusting() || !(e.getSource() instanceof DefaultListSelectionModel)) {
             icController.setSelectedCID(Optional.empty());
             return;
-        };
-        log.logToOutput("CIDSelectionListener.valueChanged: setSelectedCID to idlManagementPanel.getSelectedCID()");
+        }
         icController.setSelectedCID(idlManagementPanel.getSelectedCID());
     }
 }

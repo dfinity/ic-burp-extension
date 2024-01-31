@@ -1,7 +1,6 @@
 package org.dfinity.ic.burp.controller;
 
 import burp.api.montoya.logging.Logging;
-import org.dfinity.ic.burp.UI.InternetIdentity.InternetIdentityPanel;
 import org.dfinity.ic.burp.UI.TopPanel;
 import org.dfinity.ic.burp.model.IiState;
 import org.dfinity.ic.burp.model.InternetIdentities;

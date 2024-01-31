@@ -1,5 +1,6 @@
 package org.dfinity.ic.burp.model;
 
+import burp.api.montoya.logging.Logging;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.DelegationInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
@@ -20,15 +21,17 @@ public class InternetIdentity {
     // by default after 30 minutes.
     private Identity sessionKey;
     // Maps each origin onto an DelegatedEd25519Identity that can sign for it.
-    private Map<String, Identity> signIdentityMap;
+    private final Map<String, Identity> signIdentityMap;
     private Optional<String> code;
     private final Date creationDate;
     private Optional<Date> activationDate;
     // Keeps track whether the passkey was added to the II by the user. It is possible this boolean is set to false
     // if it is detected that the passkey is no longer valid.
     private IiState state;
+    private Logging log;
 
-    public InternetIdentity(String anchor, IcTools tools) throws IcToolsException {
+    public InternetIdentity(String anchor, IcTools tools, Logging log) throws IcToolsException {
+        this.log = log;
         this.anchor = anchor;
         this.icTools = tools;
         this.passkey = Identity.ed25519Identity(tools.generateEd25519Key());
@@ -40,9 +43,11 @@ public class InternetIdentity {
 
         // If a code was fetched, we are in the CodeObtained state, otherwise we are still in the initial state.
         this.state = code.isEmpty() ? IiState.Initial : IiState.CodeObtained;
+
     }
 
-    public InternetIdentity(String anchor, IcTools tools, IiState state, String passKeyPem, Date creationDate, Date activationDate) throws IcToolsException {
+    public InternetIdentity(String anchor, IcTools tools, Logging log, IiState state, String passKeyPem, Date creationDate, Date activationDate) throws IcToolsException {
+        this.log = log;
         this.anchor = anchor;
         this.icTools = tools;
         this.passkey = Identity.ed25519Identity(passKeyPem);
@@ -53,6 +58,7 @@ public class InternetIdentity {
         this.activationDate = Optional.ofNullable(activationDate);
         this.state = state;
     }
+
 
     public String getAnchor() {
         return anchor;
@@ -71,12 +77,14 @@ public class InternetIdentity {
     }
 
     public Optional<Identity> getSignIdentity(String origin) {
+        origin = origin.toLowerCase();
         if(signIdentityMap.get(origin) != null) {
             return Optional.of(signIdentityMap.get(origin));
         }
 
         try {
             DelegationInfo delegationInfo = this.icTools.internetIdentityGetDelegation(anchor, passkey, origin, sessionKey);
+            // Pem for a delegated identity is never empty.
             Identity signIdentity = Identity.delegatedEd25519Identity(sessionKey.getPem().get(), delegationInfo);
             signIdentityMap.put(origin, signIdentity);
             return Optional.of(signIdentity);
@@ -113,7 +121,7 @@ public class InternetIdentity {
                     this.code = Optional.empty();
                 }
             } catch (IcToolsException e) {
-
+                this.log.logToError("Error checking passkey registration: " + e);
             }
         }
         return this.state;

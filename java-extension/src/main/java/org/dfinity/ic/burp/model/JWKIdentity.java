@@ -42,17 +42,12 @@ public class JWKIdentity {
     }
 
     public Identity getIdentity(){
-        String pem = "";
+        String pem;
         try {
             ECPrivateKey priv = jwk.toECPrivateKey();
-            log.logToOutput("jwk.toKeyPair().getPrivate().getFormat()\n" + jwk.toKeyPair().getPrivate().getFormat());
-
-            log.logToOutput("EC Private key format: " + priv.getFormat());
             pem = "-----BEGIN EC PRIVATE KEY-----\n";
             pem += Base64.getEncoder().encodeToString(priv.getEncoded());
             pem += "\n-----END EC PRIVATE KEY-----";
-            log.logToOutput("pem: \n" + pem);
-            log.logToOutput("EC Private key getEncoded: " + new String(priv.getEncoded()));
 
             // TODO This is not a secp256k1 but a secp256r1 key. There is currently no support for the r1 variant in jnatools (agent-rs).
             // To be replaced once support is implemented.
@@ -69,10 +64,10 @@ public class JWKIdentity {
             InputStream is = this.getClass().getResourceAsStream("/importScript.js");
             if (is != null) {
                 template = new String(is.readAllBytes());
-            };
+            }
         } catch (IOException e) {
             return "Failed to load script file.";
-        };
+        }
 
         template = template.replaceAll("<PLACEHOLDER>", jwk.toJSONString());
 

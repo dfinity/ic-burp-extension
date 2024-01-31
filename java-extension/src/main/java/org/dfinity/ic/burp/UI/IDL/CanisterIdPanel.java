@@ -9,6 +9,7 @@ import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import java.awt.*;
+import java.util.List;
 import java.util.Optional;
 
 public class CanisterIdPanel extends JPanel {
@@ -16,19 +17,15 @@ public class CanisterIdPanel extends JPanel {
 
     private final JTable canisterIdTable;
     private final Logging log;
-    private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
-    private final IDLManagementPanel idlManagementPanel;
-    private final IdlController controller;
+    private final IdlController idlController;
 
-    public CanisterIdPanel(Logging log, IdlController controller, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, IDLManagementPanel idlManagementPanel) {
+    public CanisterIdPanel(Logging log, IdlController idlController, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, IDLManagementPanel idlManagementPanel) {
         this.log = log;
-        this.canisterInterfaceCache = canisterInterfaceCache;
-        this.idlManagementPanel = idlManagementPanel;
-        this.controller = controller;
+        this.idlController = idlController;
 
         // This button is probably no longer required in production.
         this.add(new ICButton(log, "Store IDLs to project file", e -> {
-            if(controller.storeCanisterInterfaceCache()){
+            if(idlController.storeCanisterInterfaceCache()){
                 JOptionPane.showMessageDialog(this, "Data stored successfully", "Data stored successfully", JOptionPane.INFORMATION_MESSAGE);
             }
         }));
@@ -37,14 +34,14 @@ public class CanisterIdPanel extends JPanel {
 
         // This button is probably no longer required in production.
         this.add(new ICButton(log, "Clear project data", e -> {
-            if(controller.clearCanisterInterfaceCache()){
+            if(idlController.clearCanisterInterfaceCache()){
                 JOptionPane.showMessageDialog(this, "Data cleared successfully", "Data cleared successfully", JOptionPane.INFORMATION_MESSAGE);
             }
         }));
 
         canisterIdTable = new JTable(new CanisterIdTableModel(log, canisterInterfaceCache));
         canisterIdTable.setTableHeader(null);
-        CIDSelectionListener cidSelectionListener = new CIDSelectionListener(log, idlManagementPanel, controller);
+        CIDSelectionListener cidSelectionListener = new CIDSelectionListener(log, idlManagementPanel, idlController);
         canisterIdTable.getSelectionModel().addListSelectionListener(cidSelectionListener);
 
         JScrollPane canisterIdTableScrollPane = new JScrollPane(canisterIdTable);
@@ -63,17 +60,20 @@ public class CanisterIdPanel extends JPanel {
 
         this.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        AddCanisterButtonListener addCanisterButtonListener = new AddCanisterButtonListener(log, idlManagementPanel, canisterInterfaceCache);
-        this.add(new ICButton(log, "Add canister", addCanisterButtonListener));
+        this.add(new ICButton(log, "Add canister", e-> {
+            idlController.addCanister();
+        }));
 
         this.add(Box.createRigidArea(new Dimension(0, 5)));
 
         this.add(new ICButton(log, "Re-fetch all IDLs", e -> {
-            if(controller.refreshAllInterfaceCacheEntries()){
-                JOptionPane.showMessageDialog(this, "IDLs reloaded", "IDLs reloaded", JOptionPane.INFORMATION_MESSAGE);
+            List<String> cids = idlController.refreshAllInterfaceCacheEntries();
+            if(cids.isEmpty()){
+                JOptionPane.showMessageDialog(this, "IDLs reloaded", "IC IDLs reloaded", JOptionPane.INFORMATION_MESSAGE);
                 idlManagementPanel.reloadIdlFromSelection();
             } else {
-                JOptionPane.showMessageDialog(this, "IDLs could not be reloaded", "IDLs could not be reloaded", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "IDLs for the following canisters could not be reloaded:\n" + cids,
+                        "IC IDL Reload Error", JOptionPane.INFORMATION_MESSAGE);
             }
         }));
 
@@ -85,12 +85,12 @@ public class CanisterIdPanel extends JPanel {
                 JOptionPane.showMessageDialog(this, "Please select a canister first", "Please select a canister first", JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
-            if(controller.refreshInterfaceCacheEntries(cid.get())){
-                JOptionPane.showMessageDialog(this, "IDL reloaded", "IDL reloaded", JOptionPane.INFORMATION_MESSAGE);
+            if(idlController.refreshInterfaceCacheEntries(cid.get())){
+                JOptionPane.showMessageDialog(this, "IDL reloaded", "IC IDL reloaded", JOptionPane.INFORMATION_MESSAGE);
                 // Refresh IDL text area.
                 idlManagementPanel.reloadIdlFromSelection();
             } else {
-                JOptionPane.showMessageDialog(this, "IDL could not be reloaded", "IDL could not be reloaded", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "The selected IDL could not be reloaded", "IC IDL could not be reloaded", JOptionPane.INFORMATION_MESSAGE);
             }
         }));
     }
@@ -109,6 +109,6 @@ public class CanisterIdPanel extends JPanel {
         m.fireTableDataChanged();
         // Refreshing the table undoes the CID selection.
         // Need to update the controller state to reflect this.
-        this.controller.setSelectedCID(Optional.empty());
+        this.idlController.setSelectedCID(Optional.empty());
     }
 }

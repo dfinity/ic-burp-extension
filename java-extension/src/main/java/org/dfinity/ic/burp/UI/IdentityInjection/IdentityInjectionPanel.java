@@ -11,14 +11,11 @@ public class IdentityInjectionPanel extends JPanel {
     private final Logging log;
     private final JTextArea script;
     private final JTextArea instructions;
-    private final IdlController controller;
 
     public IdentityInjectionPanel(Logging log, IdlController controller) {
         this.log = log;
-        this.controller = controller;
 
         this.instructions = new JTextArea();
-        // TODO Improve instructions for the end user.
         instructions.setText(
                 "BurpSuite automatically generated a public/private keypair which it uses to re-sign IC requests.\n" +
                 "For every dApp that you test, you can inject this key in the browser context\n" +

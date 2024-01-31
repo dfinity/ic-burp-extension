@@ -15,14 +15,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.IcTools;
-import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
-import org.dfinity.ic.burp.tools.model.IcToolsException;
-import org.dfinity.ic.burp.tools.model.InterfaceType;
-import org.dfinity.ic.burp.tools.model.Principal;
-import org.dfinity.ic.burp.tools.model.RequestInfo;
-import org.dfinity.ic.burp.tools.model.RequestMetadata;
-import org.dfinity.ic.burp.tools.model.RequestSenderInfo;
-import org.dfinity.ic.burp.tools.model.RequestType;
+import org.dfinity.ic.burp.tools.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,13 +30,8 @@ import org.mockito.quality.Strictness;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -130,8 +118,7 @@ class IcHttpRequestResponseViewerTest {
     public void shouldBeEnabledForIcRequestsAndResponses(String path, boolean isRequest) {
         returnHttpHeader(isRequest, Optional.of("application/cbor"), Optional.of("123"));
         when(request.path()).thenReturn(path);
-
-        var res = new IcHttpRequestResponseViewer(api, tools, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
+        var res = new IcHttpRequestResponseViewer(api, tools, null, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
 
         assertTrue(res);
     }
@@ -144,7 +131,7 @@ class IcHttpRequestResponseViewerTest {
         else
             when(requestResponse.hasResponse()).thenReturn(false);
 
-        var res = new IcHttpRequestResponseViewer(api, tools, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
+        var res = new IcHttpRequestResponseViewer(api, tools, null, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
 
         assertFalse(res);
     }
@@ -154,7 +141,7 @@ class IcHttpRequestResponseViewerTest {
     public void shouldBeDisabledIfPathIsMalformed(boolean isRequest) {
         when(request.path()).thenThrow(new MalformedRequestException("malformed"));
 
-        var res = new IcHttpRequestResponseViewer(api, tools, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
+        var res = new IcHttpRequestResponseViewer(api, tools, null, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
 
         assertFalse(res);
     }
@@ -164,7 +151,7 @@ class IcHttpRequestResponseViewerTest {
     public void shouldBeDisabledIfContentTypeIsNotPresent(boolean isRequest) {
         returnHttpHeader(isRequest, Optional.empty(), Optional.of("123"));
 
-        var res = new IcHttpRequestResponseViewer(api, tools, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
+        var res = new IcHttpRequestResponseViewer(api, tools, null, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
 
         assertFalse(res);
     }
@@ -174,7 +161,7 @@ class IcHttpRequestResponseViewerTest {
     public void shouldBeDisabledIfContentTypeIsWrong(boolean isRequest) {
         returnHttpHeader(isRequest, Optional.of("application/json"), Optional.of("123"));
 
-        var res = new IcHttpRequestResponseViewer(api, tools, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
+        var res = new IcHttpRequestResponseViewer(api, tools, null, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
 
         assertFalse(res);
     }
@@ -195,7 +182,7 @@ class IcHttpRequestResponseViewerTest {
             when(tools.decodeCanisterResponse(BODY_BYTES, Optional.of(new CanisterInterfaceInfo("vtrom-gqaaa-aaaaq-aabia-cai", "canisterMethod")))).thenReturn("decodedBody");
         }
 
-        new IcHttpRequestResponseViewer(api, tools, canisterInterfaceCache, callRequestCache, isRequest, Optional.of(this::mockByteArrayFactory)).setRequestResponse(requestResponse);
+        new IcHttpRequestResponseViewer(api, tools, null, canisterInterfaceCache, callRequestCache, isRequest, Optional.of(this::mockByteArrayFactory)).setRequestResponse(requestResponse);
 
         ArgumentCaptor<ByteArray> captor = ArgumentCaptor.forClass(ByteArray.class);
         verify(rawEditor).setContents(captor.capture());
@@ -212,7 +199,7 @@ class IcHttpRequestResponseViewerTest {
             when(tools.decodeCanisterResponse(BODY_BYTES, Optional.empty())).thenThrow(new IcToolsException("something went wrong"));
         }
 
-        new IcHttpRequestResponseViewer(api, tools, canisterInterfaceCache, callRequestCache, isRequest, Optional.of(this::mockByteArrayFactory)).setRequestResponse(requestResponse);
+        new IcHttpRequestResponseViewer(api, tools, null, canisterInterfaceCache, callRequestCache, isRequest, Optional.of(this::mockByteArrayFactory)).setRequestResponse(requestResponse);
 
         ArgumentCaptor<ByteArray> captor = ArgumentCaptor.forClass(ByteArray.class);
         verify(rawEditor).setContents(captor.capture());

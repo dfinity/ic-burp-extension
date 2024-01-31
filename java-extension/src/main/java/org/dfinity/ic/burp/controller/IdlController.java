@@ -10,6 +10,8 @@ import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -37,22 +39,14 @@ public class IdlController {
         return dataPersister.clearCanisterInterfaceCache();
     }
 
-    public boolean refreshAllInterfaceCacheEntries() {
+    public List<String> refreshAllInterfaceCacheEntries() {
+        List<String> result = new ArrayList<>();
         for(Map.Entry<String, CanisterCacheInfo> entry : canisterInterfaceCache.synchronous().asMap().entrySet()){
             String cid = entry.getKey();
-            try {
-                Optional<String> idlOpt = icTools.discoverCanisterInterface(cid);
-                if(idlOpt.isEmpty())
-                    continue;
-
-                CanisterCacheInfo info = entry.getValue();
-                info.putCanisterInterface(idlOpt.get(), InterfaceType.AUTOMATIC);
-            } catch (IcToolsException e) {
-                log.logToError("Could not refresh IDLs.", e);
-                return false;
-            }
-        };
-        return true;
+            if(!this.refreshInterfaceCacheEntries(cid))
+                result.add(cid);
+        }
+        return result;
     }
 
     public boolean refreshInterfaceCacheEntries(String cid) {
@@ -67,31 +61,27 @@ public class IdlController {
 
             info.putCanisterInterface(idlOpt.get(), InterfaceType.AUTOMATIC);
         } catch (IcToolsException e) {
-            log.logToError("Could not refresh IDLs", e);
+            log.logToError("Could not refresh IDL", e);
             return false;
         }
         return true;
     }
 
-    public boolean updateSelectedIDL(String idl){
+    public void updateSelectedIDL(String idl){
         log.logToOutput("Updating IDL for CID: " + selectedCID + " and type: " + selectedType);
         if(selectedCID.isEmpty() || selectedType.isEmpty()){
-            return false;
+            return;
         }
         CanisterCacheInfo info = canisterInterfaceCache.get(selectedCID.get()).join();
         info.putCanisterInterface(idl, selectedType.get());
-        return true;
     }
 
     public void setSelectedCID(Optional<String> cid) {
-        log.logToOutput("ICController.setSelectedCID");
-
         this.selectedCID = cid;
 
         if (cid.isEmpty()) {
             return;
         } else {
-            log.logToOutput("Set IDL Panel to visible");
             topPanel.showIdlPanel();
         }
 
@@ -101,14 +91,11 @@ public class IdlController {
     }
 
     public void setSelectedType(Optional<InterfaceType> type){
-        log.logToOutput("ICController.setSelectedType");
         this.selectedType = type;
         reloadIDLContent();
     }
 
     public void reloadIDLContent(){
-        log.logToOutput("ICController.reloadIDLContent");
-
         if(selectedCID.isEmpty() || selectedType.isEmpty()){
             this.topPanel.setIDLContent("Select a canister and interface type.");
             return;
@@ -126,5 +113,23 @@ public class IdlController {
 
     public JWKIdentity getDefaultIdentity() {
         return dataPersister.getDefaultIdentity();
+    }
+
+    public void addCanister() {
+        String cid = this.topPanel.getUserInput("New canister ID: ", "aaaaa-aaaaa-aaaaa-aaaaa-aaa");
+        if(cid != null && !cid.isBlank() && !cid.matches("\\w{5}-\\w{5}-\\w{5}-\\w{5}-\\w{3}")){
+            this.topPanel.showErrorMessage("Wrong format! \n\nA canister ID looks as follows:\naaaaa-aaaaa-aaaaa-aaaaa-aaa",
+                    "Format error");
+            return;
+        }
+        if(this.canisterInterfaceCache.getIfPresent(cid) != null){
+            this.topPanel.showInfoMessage( "Canister already exists", "Canister already exists");
+            return;
+        }
+        this.canisterInterfaceCache.get(cid);
+
+        this.topPanel.onCacheLoad();
+        this.topPanel.reloadIdlFromSelection();
+        this.topPanel.reloadIDLTable();
     }
 }

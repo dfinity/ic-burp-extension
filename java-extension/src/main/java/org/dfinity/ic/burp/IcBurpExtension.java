@@ -31,17 +31,10 @@ public class IcBurpExtension implements BurpExtension {
         api.extension().setName("IC Burp Extension " + Optional.of(getClass()).map(Class::getPackage).map(Package::getImplementationVersion).orElse("DEV"));
 
         IcTools icTools = new JnaIcTools();
-
         CacheLoaderSubscriber l = new CacheLoaderSubscriber();
         DataPersister dataPersister = new DataPersister(api.logging(), icTools, api.persistence().extensionData(), l);
         canisterInterfaceCache = dataPersister.getCanisterInterfaceCache();
         this.internetIdentities = dataPersister.getInternetIdentities();
-
-
-        Cache<String, RequestMetadata> callRequestCache = Caffeine.newBuilder().maximumSize(10_000).build();
-        var viewerProvider = new IcHttpRequestResponseViewerProvider(api, icTools, canisterInterfaceCache, callRequestCache);
-        api.userInterface().registerHttpRequestEditorProvider(viewerProvider);
-        api.userInterface().registerHttpResponseEditorProvider(viewerProvider);
 
         // Create top level UI component and have the loader delegate notifications to it to update the UI accordingly.
         IdlController idlController = new IdlController(api.logging(), canisterInterfaceCache, dataPersister, icTools);
@@ -53,9 +46,14 @@ public class IcBurpExtension implements BurpExtension {
 
         api.userInterface().registerSuiteTab("IC", tp);
 
+        Cache<String, RequestMetadata> callRequestCache = Caffeine.newBuilder().maximumSize(10_000).build();
+        var viewerProvider = new IcHttpRequestResponseViewerProvider(api, icTools, tp, canisterInterfaceCache, callRequestCache);
+        api.userInterface().registerHttpRequestEditorProvider(viewerProvider);
+        api.userInterface().registerHttpResponseEditorProvider(viewerProvider);
+
         // Register an HTTP handler that intercepts all requests to update the interface cache.
         api.http().registerHttpHandler(new IcCacheRefresh(api.logging(), icTools, canisterInterfaceCache, callRequestCache, Optional.empty(), Optional.empty()));
-        api.http().registerHttpHandler(new IcSigning(api.logging(), icTools, canisterInterfaceCache, internetIdentities));
+        api.http().registerHttpHandler(new IcSigning(api.logging(), icTools, tp, canisterInterfaceCache, internetIdentities));
 
         // Add Context Menu item to send IC requests to the repeater.
         api.userInterface().registerContextMenuItemsProvider(new ProxyContextMenuProvider(api, icTools, canisterInterfaceCache, internetIdentities));

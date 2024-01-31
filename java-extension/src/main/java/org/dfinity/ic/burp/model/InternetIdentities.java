@@ -34,10 +34,11 @@ public class InternetIdentities extends AbstractTableModel {
 
     public Optional<InternetIdentity> addIdentity(String anchor) throws IcToolsException {
         if(anchor == null) return Optional.empty();
+        anchor = anchor.toLowerCase();
 
         if(identities.containsKey(anchor))
             return Optional.empty();
-        InternetIdentity ii = new InternetIdentity(anchor, tools);
+        InternetIdentity ii = new InternetIdentity(anchor, tools, log);
         identities.put(anchor, ii);
         int rowAdded = identities.keySet().stream().sorted().toList().indexOf(anchor);
         this.fireTableRowsInserted(rowAdded,rowAdded);
@@ -46,13 +47,13 @@ public class InternetIdentities extends AbstractTableModel {
 
     /**
      * Used to create an existing II from storage.
-     * @param anchor
-     * @param passKeyPem
-     * @param creationDate
-     * @param activationDate
+     * @param anchor The anchor used for this II.
+     * @param passKeyPem The private key of the passKey authorized for this II.
+     * @param creationDate When the II was initially added to BurpSuite.
+     * @param activationDate When the II was activated the last time by authorizing the passkey.
      */
     public void addIdentity(String anchor, String passKeyPem, IiState state, Date creationDate, Date activationDate) throws IcToolsException {
-        InternetIdentity ii = new InternetIdentity(anchor, this.tools, state, passKeyPem, creationDate, activationDate);
+        InternetIdentity ii = new InternetIdentity(anchor, this.tools, this.log, state, passKeyPem, creationDate, activationDate);
         identities.put(anchor, ii);
     }
 
@@ -79,10 +80,11 @@ public class InternetIdentities extends AbstractTableModel {
      * principal as the one found in the sender field of the request.
      *
      * Otherwise, we return an error.
-     * @return
+     * @return The anchor or Empty if none was found that matches the sender principal for this origin.
      * TODO Should we call iiIsPasskeyRegistered to verify that the passkey is still valid?
      */
     public Optional<String> findAnchor(RequestSenderInfo requestSenderInfo, String origin) {
+        log.logToOutput("findAnchor for " + requestSenderInfo + " and " + origin);
         if(requestSenderInfo.sender().equals(Principal.anonymous())){
             return Optional.of("anonymous");
         }
@@ -91,24 +93,29 @@ public class InternetIdentities extends AbstractTableModel {
 
         for(Map.Entry<String, InternetIdentity> entry : identities.entrySet()){
             InternetIdentity ii = entry.getValue();
+            log.logToOutput("findAnchor iterating through II with anchor " + ii.getAnchor() + "\n" + ii);
+
             if(!ii.getState().equals(IiState.Active)){
                 continue;
             }
             try {
                 Principal p = this.tools.internetIdentityGetPrincipal(entry.getKey(), ii.getPasskey(), origin);
+                log.logToOutput("findAnchor comparing principal " + p + " with sender " + requestSenderInfo.sender());
                 if (p.equals(requestSenderInfo.sender())){
                     return Optional.of(ii.getAnchor());
                 }
             }
             catch (IcToolsException e) {
                 // SignIdentity might not be registered as passkey for this II.
-                continue;
+                this.log.logToError("An exception occurred trying to find the principal for the  anchor" + entry.getKey()
+                + "\n" + e.getStackTraceAsString());
             }
         }
         return Optional.empty();
     }
 
     public Optional<Identity> findSignIdentity(String anchor, String origin) throws IcToolsException {
+        anchor = anchor.toLowerCase();
         if(anchor.equals("anonymous")){
             return Optional.of(Identity.anonymousIdentity());
         }
@@ -118,6 +125,7 @@ public class InternetIdentities extends AbstractTableModel {
     }
 
     private Optional<InternetIdentity> getIdentity(String anchor) {
+        anchor = anchor.toLowerCase();
         return Optional.ofNullable(this.identities.get(anchor));
     }
 
@@ -148,9 +156,7 @@ public class InternetIdentities extends AbstractTableModel {
 
     public InternetIdentity getSelectedII(){
         if(this.selectedII.isEmpty()) return null;
-
-        InternetIdentity ii = this.identities.get(this.selectedII.get());
-        return ii;
+        return this.identities.get(this.selectedII.get());
     }
 
     @Override
