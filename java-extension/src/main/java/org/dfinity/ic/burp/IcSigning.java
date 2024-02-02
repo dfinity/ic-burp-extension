@@ -89,11 +89,9 @@ public class IcSigning implements HttpHandler {
             }
 
             byte[] newBody = icTools.encodeAndSignCanisterRequest(requestToBeSent.bodyToString(), idlopt, id.get());
-            log.logToOutput("IcSigning.handleHttpRequestToBeSent - Sending signed and encoded request with new body: " + Arrays.toString(newBody));
             HttpRequest req = requestToBeSent.withRemovedHeader(IC_SIGN_IDENTITY_HEADER_NAME);
             req = req.withRemovedHeader(IC_DECODED_HEADER_NAME);
             req = req.withBody(ByteArray.byteArray(newBody));
-            log.logToOutput("Request to be sent: \n" + req);
             return RequestToBeSentAction.continueWith(req);
         } catch (IcToolsException e) {
             this.log.logToError("Exception raised during re-signing of the request: " + e);
@@ -103,8 +101,6 @@ public class IcSigning implements HttpHandler {
 
     @Override
     public ResponseReceivedAction handleHttpResponseReceived(HttpResponseReceived responseReceived) {
-        log.logToOutput("Calling IcSigning.handleHttpResponseReceived with tool source: " + responseReceived.toolSource().toolType());
-        log.logToOutput(responseReceived.initiatingRequest().toString());
 
         HttpRequest request = responseReceived.initiatingRequest();
 
@@ -145,7 +141,6 @@ public class IcSigning implements HttpHandler {
             log.logToError("Failed to decode response with path " + request.path(), e);
             newBody = String.format("Failed to decode response with path %s: %s", request.path(), e.getStackTraceAsString());
         }
-        log.logToOutput("Continuing with modified response body: \n" + newBody);
         return ResponseReceivedAction.continueWith(responseReceived.withAddedHeader(IC_DECODED_HEADER_NAME, "True").withBody(newBody));
     }
 }
