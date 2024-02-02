@@ -229,7 +229,7 @@ pub fn decode_canister_response(encoded_cbor_response: Vec<u8>, canister_interfa
 
 fn decode_query_response(query_response: QueryResponse, idl_config: Option<IdlConfig>) -> EncodingResult<String> {
     let pretty: QueryResponsePretty = query_response.clone().into();
-    let query_json = serde_json::to_string_pretty(&pretty).unwrap();
+    let query_json = serde_json::to_string_pretty(&pretty)?;
 
     match query_response.clone() {
         QueryResponse::Replied { reply: x, .. } => {
@@ -244,10 +244,10 @@ fn decode_query_response(query_response: QueryResponse, idl_config: Option<IdlCo
 
 fn decode_readstate_response(readstate_response: ReadStateResponse, idl_config: Option<IdlConfig>) -> EncodingResult<String> {
     let response_pretty: ReadStateResponsePretty = readstate_response.into();
-    let mut response_json = serde_json::to_string(&response_pretty).unwrap();
+    let mut response_json = serde_json::to_string(&response_pretty)?;
     let finding = find_candid_in_tree(HashTreeNode::from(response_pretty.certificate.tree));
     for candid in finding {
-        let candid_json = serde_json::to_string(&candid).unwrap();
+        let candid_json = serde_json::to_string(&candid)?;
         let candid_pretty = vec_to_idl_arg_factory(candid, &idl_config)?.to_string();
         response_json = response_json.replace(&*candid_json, &*candid_pretty);
     }
@@ -278,19 +278,19 @@ fn find_candid_in_tree(root: HashTreeNode<Vec<u8>>) -> Vec<Vec<u8>> {
     }
 }
 
-fn idl_arg_to_vec_factory(arg: IDLArgs, idl: &Option<IdlConfig>) -> Vec<u8> {
+fn idl_arg_to_vec_factory(arg: IDLArgs, idl: &Option<IdlConfig>) -> EncodingResult<Vec<u8>> {
     match idl {
-        None => { arg.to_bytes().unwrap() }
+        None => { Ok(arg.to_bytes()?) }
         Some(config) => {
             let idl = CandidSource::Text(&*config.api);
-            let (type_env, actor) = idl.load().unwrap();
-            let actor = actor.unwrap();
-            let func = type_env.get_method(&actor, &*config.method).unwrap();
+            let (type_env, actor) = idl.load()?;
+            let actor = actor.ok_or(CandidConversionFailed(candid::Error::msg("no actor found")))?;
+            let func = type_env.get_method(&actor, &*config.method)?;
             let types = match config.direction {
                 REQUEST => { (&func.args).clone() }
                 RESPONSE => { (&func.rets).clone() }
             };
-            arg.to_bytes_with_types(&type_env, &types).unwrap()
+            Ok(arg.to_bytes_with_types(&type_env, &types)?)
         }
     }
 }
@@ -330,7 +330,7 @@ pub fn encode_and_sign_canister_request(decoded_request: String, canister_interf
                     })
                 }
             };
-            let candid_arg = idl_arg_to_vec_factory(parse_idl_args(&candid.ok_or(SigningFailed("could not find candid arg".to_string()))?)?, &idl_config);
+            let candid_arg = idl_arg_to_vec_factory(parse_idl_args(&candid.ok_or(SigningFailed("could not find candid arg".to_string()))?)?, &idl_config)?;
             EnvelopeContent::Query {
                 ingress_expiry: get_expiry_date(),
                 sender: identity.sender().map_err(SigningFailed)?,
@@ -351,7 +351,7 @@ pub fn encode_and_sign_canister_request(decoded_request: String, canister_interf
                     })
                 }
             };
-            let candid_arg = idl_arg_to_vec_factory(parse_idl_args(&candid.ok_or(SigningFailed("could not find candid arg".to_string()))?)?, &idl_config);
+            let candid_arg = idl_arg_to_vec_factory(parse_idl_args(&candid.ok_or(SigningFailed("could not find candid arg".to_string()))?)?, &idl_config)?;
             EnvelopeContent::Call {
                 nonce: Some(OsRng.gen::<[u8; 16]>().to_vec()),
                 ingress_expiry: get_expiry_date(),
