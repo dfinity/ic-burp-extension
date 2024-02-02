@@ -5,13 +5,10 @@ import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.requests.MalformedRequestException;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import burp.api.montoya.logging.Logging;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.json.JsonReadFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
+import org.dfinity.ic.burp.model.InternetIdentities;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.RequestInfo;
@@ -32,14 +29,16 @@ public class IcCacheRefresh implements HttpHandler {
     private final Cache<String, RequestMetadata> callRequestCache;
     private final Function<HttpRequest, RequestToBeSentAction> continueWithRequest;
     private final Function<HttpResponse, ResponseReceivedAction> continueWithResponse;
+    private final InternetIdentities internetIdentities;
 
-    public IcCacheRefresh(Logging log, IcTools icTools, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, Cache<String, RequestMetadata> callRequestCache, Optional<Function<HttpRequest, RequestToBeSentAction>> continueWithRequest, Optional<Function<HttpResponse, ResponseReceivedAction>> continueWithResponse) {
+    public IcCacheRefresh(Logging log, IcTools icTools, InternetIdentities internetIdentities, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, Cache<String, RequestMetadata> callRequestCache, Optional<Function<HttpRequest, RequestToBeSentAction>> continueWithRequest, Optional<Function<HttpResponse, ResponseReceivedAction>> continueWithResponse) {
         this.log = log;
         this.icTools = icTools;
         this.canisterInterfaceCache = canisterInterfaceCache;
         this.callRequestCache = callRequestCache;
         this.continueWithRequest = continueWithRequest.orElse(RequestToBeSentAction::continueWith);
         this.continueWithResponse = continueWithResponse.orElse(ResponseReceivedAction::continueWith);
+        this.internetIdentities = internetIdentities;
     }
 
     private static Optional<UrlInfo> getUrlInfo(String path) {
@@ -70,33 +69,20 @@ public class IcCacheRefresh implements HttpHandler {
                                 "mapping of origin, anchor and principal which prevents anchor detection for " +
                                 "requests sent to the repeater or intruder.");
                     } else {
-                        // Extract the anchor and hostname and store them in a mapping.
+                        // Extract the anchor and origin and store them in a mapping.
                         log.logToOutput("Extracting requestInfo");
                         RequestInfo requestInfo =icTools.decodeCanisterRequest(requestToBeSent.body().getBytes(), info.getActiveCanisterInterface());
 
-                            /*ObjectMapper mapper = new ObjectMapper();
-                        mapper.configure(
-                                JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS.mappedFeature(),
-                                true
-                        );
+                        Pattern getDelegationRegex = Pattern.compile("[\\S\\s]*arg.*\\s*(?<anchor>[\\d_]*)\\s*:.*\\s*.*\\\"(?<origin>http.*)\\\"[\\S\\s]*", Pattern.MULTILINE);
+                        Matcher matcher = getDelegationRegex.matcher(requestInfo.decodedRequest());
+                        if (matcher.matches() && !matcher.group("anchor").isBlank() && !matcher.group("origin").isBlank()) {
+                            String anchor = matcher.group("anchor").replace("_", "");
+                            String origin = matcher.group("origin");
+                            log.logToOutput("requestInfo.decodedRequest() anchor: " + anchor);
+                            log.logToOutput("requestInfo.decodedRequest() origin: " + origin);
+                            internetIdentities.updatePrincipalToAnchorMap(anchor, origin);
 
-                            JsonNode node = mapper.readTree(requestInfo.decodedRequest());
-                            String arg = node.get("content").get("arg").asText();
-                            //log.logToOutput("requestInfo.decodedRequest() arg: " + arg);
-                            // Match anchor
-                            log.logToOutput("Obtained arg object.");
-
-                         */
-
-                            Pattern getDelegationRegex = Pattern.compile("[\\S\\s]*arg.*\\s*(?<anchor>[\\d_]*)\\s*:.*\\s*.*\\\"(?<hostname>http.*)\\\"[\\S\\s]*", Pattern.MULTILINE);
-                            Matcher matcher = getDelegationRegex.matcher(requestInfo.decodedRequest());
-                            if (matcher.matches() && !matcher.group("anchor").isBlank() && !matcher.group("hostname").isBlank()) {
-                                String anchor = matcher.group("anchor").replace("_", "");
-                                String hostname = matcher.group("hostname");
-                                log.logToOutput("requestInfo.decodedRequest() anchor: " + anchor);
-                                log.logToOutput("requestInfo.decodedRequest() hostname: " + hostname);
-
-                            }
+                        }
                     }
                 }
 

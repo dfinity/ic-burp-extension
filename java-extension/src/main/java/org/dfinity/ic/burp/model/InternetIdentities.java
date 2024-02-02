@@ -8,10 +8,8 @@ import org.dfinity.ic.burp.tools.model.Principal;
 import org.dfinity.ic.burp.tools.model.RequestSenderInfo;
 
 import javax.swing.table.AbstractTableModel;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+
 
 public class InternetIdentities extends AbstractTableModel {
 
@@ -22,10 +20,14 @@ public class InternetIdentities extends AbstractTableModel {
 
     private Optional<String> selectedII;
 
+    // Maps principals discovered in get_delegation messages to anchor and origin. To avoid a dependency on JavaFx we use
+    // a list instead of Pair. The first element in the list is the anchor and the second is the origin.
+    private Map<Principal, List<String>> principalToAnchorMap;
     public InternetIdentities(Logging log, IcTools tools){
         this.log = log;
         this.tools = tools;
         this.selectedII = Optional.empty();
+        this.principalToAnchorMap = new HashMap<>();
     }
 
     public HashMap<String, InternetIdentity> getIdentities() {
@@ -80,16 +82,21 @@ public class InternetIdentities extends AbstractTableModel {
      * principal as the one found in the sender field of the request.
      *
      * Otherwise, we return an error.
-     * @return The anchor or Empty if none was found that matches the sender principal for this origin.
+     * @return The anchor and origin or Empty if none was found that matches the sender principal for this origin.
      * TODO Should we call iiIsPasskeyRegistered to verify that the passkey is still valid?
      */
-    public Optional<String> findAnchor(RequestSenderInfo requestSenderInfo, String origin) {
+    public Optional<List<String>> findAnchor(RequestSenderInfo requestSenderInfo, String origin) {
         log.logToOutput("findAnchor for " + requestSenderInfo + " and " + origin);
         if(requestSenderInfo.sender().equals(Principal.anonymous())){
-            return Optional.of("anonymous");
+            return Optional.of(new ArrayList<>(Arrays.asList("anonymous", origin)));
         }
 
         if(origin == null) return Optional.empty();
+        log.logToOutput("findAnchor checking principalToAnchorMap " + principalToAnchorMap.toString());
+        if(principalToAnchorMap.get(requestSenderInfo.sender()) != null){
+            log.logToOutput("findAnchor checking principalToAnchorMap found match: " + principalToAnchorMap.get(requestSenderInfo.sender()));
+            return Optional.of(principalToAnchorMap.get(requestSenderInfo.sender()));
+        }
 
         for(Map.Entry<String, InternetIdentity> entry : identities.entrySet()){
             InternetIdentity ii = entry.getValue();
@@ -102,7 +109,7 @@ public class InternetIdentities extends AbstractTableModel {
                 Principal p = this.tools.internetIdentityGetPrincipal(entry.getKey(), ii.getPasskey(), origin);
                 log.logToOutput("findAnchor comparing principal " + p + " with sender " + requestSenderInfo.sender());
                 if (p.equals(requestSenderInfo.sender())){
-                    return Optional.of(ii.getAnchor());
+                    return Optional.of(new ArrayList<>(Arrays.asList(ii.getAnchor(), origin)));
                 }
             }
             catch (IcToolsException e) {
@@ -122,6 +129,22 @@ public class InternetIdentities extends AbstractTableModel {
         Optional<InternetIdentity> ii = this.getIdentity(anchor);
         if(ii.isEmpty()) return Optional.empty();
         return ii.get().getSignIdentity(origin);
+    }
+
+    public void updatePrincipalToAnchorMap(String anchor, String origin) {
+        Optional<InternetIdentity> ii = this.getIdentity(anchor);
+        if(ii.isPresent()) {
+            try {
+                Principal p = this.tools.internetIdentityGetPrincipal(anchor, ii.get().getPasskey(), origin);
+                List<String> val = new ArrayList<>();
+                val.add(anchor);
+                val.add(origin);
+                log.logToOutput("Adding to principalToAnchorMap: " + p.toString() + " and " + val);
+                this.principalToAnchorMap.put(p, val);
+            } catch (IcToolsException e) {
+                log.logToError("Error occurred trying to update the principal to anchor map: " + e.getStackTraceAsString());
+            }
+        }
     }
 
     private Optional<InternetIdentity> getIdentity(String anchor) {
@@ -144,7 +167,6 @@ public class InternetIdentities extends AbstractTableModel {
         if(this.selectedII.isEmpty()) return false;
         return this.remove(this.selectedII.get());
     }
-
 
     public boolean remove(String anchor) {
         return this.identities.remove(anchor) != null;

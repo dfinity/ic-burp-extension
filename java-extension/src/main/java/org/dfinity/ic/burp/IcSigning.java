@@ -15,12 +15,10 @@ import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.Identity;
 
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static org.dfinity.ic.burp.IcBurpExtension.IC_DECODED_HEADER_NAME;
-import static org.dfinity.ic.burp.IcBurpExtension.IC_SIGN_IDENTITY_HEADER_NAME;
+import static org.dfinity.ic.burp.IcBurpExtension.*;
 import static org.dfinity.ic.burp.IcHttpRequestResponseViewer.getCanisterId;
 
 public class IcSigning implements HttpHandler {
@@ -74,7 +72,10 @@ public class IcSigning implements HttpHandler {
                 this.log.logToError("No anchor set in " + IC_SIGN_IDENTITY_HEADER_NAME + " header.");
                 return null;
             }
-            String origin = requestToBeSent.headerValue("Origin");
+            // Take the icOrigin header if present and otherwise the normal origin one as backup.
+            // The icOrigin header is set when decoding the request and finding the principal from an earlier call to get_delegation.
+            Optional<String> icOrigin = Optional.ofNullable(requestToBeSent.headerValue(IC_ORIGIN_HEADER_NAME));
+            String origin = icOrigin.orElse(requestToBeSent.headerValue("Origin"));
             if(origin.isBlank()) {
                 topPanel.showErrorMessage("The origin header needs to be set to match the origin of the dApp.", "IC error.");
                 this.log.logToError("Empty Origin header for proxy request to " + requestToBeSent.url());
@@ -91,6 +92,7 @@ public class IcSigning implements HttpHandler {
             byte[] newBody = icTools.encodeAndSignCanisterRequest(requestToBeSent.bodyToString(), idlopt, id.get());
             HttpRequest req = requestToBeSent.withRemovedHeader(IC_SIGN_IDENTITY_HEADER_NAME);
             req = req.withRemovedHeader(IC_DECODED_HEADER_NAME);
+            req = req.withRemovedHeader(IC_ORIGIN_HEADER_NAME);
             req = req.withBody(ByteArray.byteArray(newBody));
             return RequestToBeSentAction.continueWith(req);
         } catch (IcToolsException e) {

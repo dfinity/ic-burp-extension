@@ -22,8 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static org.dfinity.ic.burp.IcBurpExtension.IC_DECODED_HEADER_NAME;
-import static org.dfinity.ic.burp.IcBurpExtension.IC_SIGN_IDENTITY_HEADER_NAME;
+import static org.dfinity.ic.burp.IcBurpExtension.*;
 
 
 public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
@@ -82,9 +81,12 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
             Optional<String> idl = canisterCacheInfo.join().getActiveCanisterInterface();
             try {
                 RequestInfo requestInfo = icTools.decodeCanisterRequest(req.body().getBytes(), idl);
-                Optional<String> anchor = internetIdentities.findAnchor(requestInfo.senderInfo(), req.headerValue("Origin"));
-                req = req.withAddedHeader(IC_DECODED_HEADER_NAME, "True");
-                req = req.withAddedHeader(IC_SIGN_IDENTITY_HEADER_NAME, anchor.orElse(""));
+                Optional<List<String>> result = internetIdentities.findAnchor(requestInfo.senderInfo(), req.headerValue("Origin"));
+                if(result.isPresent()) {
+                    req = req.withAddedHeader(IC_DECODED_HEADER_NAME, "True");
+                    req = req.withAddedHeader(IC_SIGN_IDENTITY_HEADER_NAME, result.get().get(0));
+                    req = req.withAddedHeader(IC_ORIGIN_HEADER_NAME, result.get().get(1));
+                }
                 httpRequestList.add(req.withBody(requestInfo.decodedRequest()));
 
             } catch (IcToolsException e) {
