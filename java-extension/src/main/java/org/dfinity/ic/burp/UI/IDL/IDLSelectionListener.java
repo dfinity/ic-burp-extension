@@ -1,7 +1,7 @@
 package org.dfinity.ic.burp.UI.IDL;
 
 import burp.api.montoya.logging.Logging;
-import org.dfinity.ic.burp.controller.ICController;
+import org.dfinity.ic.burp.controller.IdlController;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -11,9 +11,9 @@ import java.util.Optional;
 public class IDLSelectionListener  implements ListSelectionListener {
     private final IDLManagementPanel idlManagementPanel;
     private final Logging log;
-    private final ICController icController;
+    private final IdlController icController;
 
-    public IDLSelectionListener(Logging log, IDLManagementPanel idlManagementPanel, ICController controller) {
+    public IDLSelectionListener(Logging log, IDLManagementPanel idlManagementPanel, IdlController controller) {
         this.log = log;
         this.idlManagementPanel = idlManagementPanel;
         this.icController = controller;
@@ -28,6 +28,5 @@ public class IDLSelectionListener  implements ListSelectionListener {
 
         log.logToOutput("IDLSelectionListener.valueChanged: " + e);
         icController.setSelectedType(idlManagementPanel.getSelectedType());
-        //idlManagementPanel.reloadIdlFromSelection();
     }
 }

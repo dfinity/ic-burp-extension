@@ -1,10 +1,6 @@
 package org.dfinity.ic.burp.tools.jna;
 
-import org.dfinity.ic.burp.tools.model.IcToolsException;
-import org.dfinity.ic.burp.tools.model.Identity;
-import org.dfinity.ic.burp.tools.model.Principal;
-import org.dfinity.ic.burp.tools.model.RequestSenderInfo;
-import org.dfinity.ic.burp.tools.model.RequestType;
+import org.dfinity.ic.burp.tools.model.*;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 

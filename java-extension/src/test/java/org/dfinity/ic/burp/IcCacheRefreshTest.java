@@ -12,13 +12,9 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
+import org.dfinity.ic.burp.model.InternetIdentities;
 import org.dfinity.ic.burp.tools.IcTools;
-import org.dfinity.ic.burp.tools.model.IcToolsException;
-import org.dfinity.ic.burp.tools.model.InterfaceType;
-import org.dfinity.ic.burp.tools.model.Principal;
-import org.dfinity.ic.burp.tools.model.RequestMetadata;
-import org.dfinity.ic.burp.tools.model.RequestSenderInfo;
-import org.dfinity.ic.burp.tools.model.RequestType;
+import org.dfinity.ic.burp.tools.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,6 +53,7 @@ class IcCacheRefreshTest {
     @Mock
     private ResponseReceivedAction responseAction;
     private IcCacheRefresh cacheRefresh;
+    private InternetIdentities internetIdentities;
 
     private void returnHttpHeader(Optional<String> contentType, Optional<String> contentLength) {
 
@@ -90,7 +87,8 @@ class IcCacheRefreshTest {
         when(tools.getRequestMetadata(BODY_BYTES)).thenReturn(META_DATA);
 
         var log = mock(Logging.class);
-        cacheRefresh = new IcCacheRefresh(log, tools, canisterInterfaceCache, callRequestCache, Optional.of(x -> x == request ? requestAction : null), Optional.of(x -> x == response ? responseAction : null));
+        cacheRefresh = new IcCacheRefresh(log, tools, internetIdentities, canisterInterfaceCache, callRequestCache, Optional.of(x -> x == request ? requestAction : null), Optional.of(x -> x == response ? responseAction : null));
+        internetIdentities = new InternetIdentities(log, tools);
     }
 
     @Test

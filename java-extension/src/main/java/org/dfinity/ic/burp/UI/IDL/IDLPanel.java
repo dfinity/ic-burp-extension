@@ -3,7 +3,7 @@ package org.dfinity.ic.burp.UI.IDL;
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import org.dfinity.ic.burp.UI.ICButton;
-import org.dfinity.ic.burp.controller.ICController;
+import org.dfinity.ic.burp.controller.IdlController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
 
@@ -19,7 +19,7 @@ public class IDLPanel extends JPanel{
     private final JTextArea idlTextArea;
     private final JTable idlTable;
 
-    public IDLPanel(Logging log, ICController controller, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, IDLManagementPanel idlManagementPanel) {
+    public IDLPanel(Logging log, IdlController controller, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache, IDLManagementPanel idlManagementPanel) {
         this.log = log;
         JPanel left = new JPanel();
 
@@ -83,7 +83,7 @@ public class IDLPanel extends JPanel{
         if(idlTable.getSelectedRow() < 0 || idlTable.getSelectedColumn() < 0){
             return Optional.empty();
         }
-        Optional<Object> val = Optional.ofNullable(idlTable.getValueAt(idlTable.getSelectedRow(), idlTable.getSelectedColumn()));
+        Optional<Object> val = Optional.ofNullable(idlTable.getValueAt(idlTable.getSelectedRow(), 0));
         if (val.isEmpty()) {
             return Optional.empty();
         }

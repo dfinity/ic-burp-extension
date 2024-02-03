@@ -1,25 +1,28 @@
-package org.dfinity.ic.burp.UI.Identity;
+package org.dfinity.ic.burp.UI.IdentityInjection;
 
 import burp.api.montoya.logging.Logging;
-import com.nimbusds.jose.JOSEException;
+import org.dfinity.ic.burp.controller.IdlController;
 import org.dfinity.ic.burp.model.JWKIdentity;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class IdentityMgmtPanel extends JPanel {
+public class IdentityInjectionPanel extends JPanel {
     private final Logging log;
     private final JTextArea script;
     private final JTextArea instructions;
 
-    public IdentityMgmtPanel(Logging log) {
+    public IdentityInjectionPanel(Logging log, IdlController controller) {
         this.log = log;
 
         this.instructions = new JTextArea();
         instructions.setText(
-                "BurpSuite automatically generated a public/private keypair which it uses to resign IC requests.\n" +
-                "For every dApp that you test, you need to inject this key in the browser context\n" +
-                "This will allow the browser to use the same key (and therefor identity) as BurpSuite.");
+                "BurpSuite automatically generated a public/private keypair which it uses to re-sign IC requests.\n" +
+                "For every dApp that you test, you can inject this key in the browser context\n" +
+                "This will allow the browser to use the same key (and therefor identity) as BurpSuite.\n" +
+                "This key will take precedence if it is detected that the request was by the browser to sign. That means\n" +
+                "that even if an II is present, it won't be used unless explicitly mentioned in the\n"+
+                "x-ic-sign-identity header.");
         this.instructions.setEditable(false);
 
         Font f1 = instructions.getFont();
@@ -38,12 +41,11 @@ public class IdentityMgmtPanel extends JPanel {
         this.script = new JTextArea();
         this.script.setEditable(false);
 
-        try {
-            JWKIdentity id = new JWKIdentity(log);
-            script.setText(id.getScript());
-        } catch (JOSEException e) {
-            log.logToError("Failed to generate a keypair for the default IC identity.", e);
-        }
+        JWKIdentity id = controller.getDefaultIdentity();
+        if(id == null)
+            script.setText("Could not generate or fetch the default identity.");
+        else
+            script.setText(controller.getDefaultIdentity().getScript());
 
         script.setAlignmentX(Component.LEFT_ALIGNMENT);
         script.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));

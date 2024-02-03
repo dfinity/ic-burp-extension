@@ -2,7 +2,7 @@ package org.dfinity.ic.burp.UI.IDL;
 
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import org.dfinity.ic.burp.controller.ICController;
+import org.dfinity.ic.burp.controller.IdlController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
 
@@ -15,7 +15,7 @@ public class IDLManagementPanel extends JSplitPane {
     private final Logging log;
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
 
-    public IDLManagementPanel(Logging log, ICController controller, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache) {
+    public IDLManagementPanel(Logging log, IdlController controller, AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache) {
         super(JSplitPane.HORIZONTAL_SPLIT);
 
         this.log = log;

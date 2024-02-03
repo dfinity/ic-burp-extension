@@ -15,6 +15,7 @@ dependencies {
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
     implementation("com.nimbusds:nimbus-jose-jwt:9.37.3")
     implementation("commons-codec:commons-codec:1.16.0")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.16.1")
     testImplementation(platform("org.junit:junit-bom:5.9.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.mockito:mockito-core:5.6.0")
