@@ -66,7 +66,7 @@ public class CanisterIdPanel extends JPanel {
 
         this.add(Box.createRigidArea(new Dimension(0, 5)));
 
-        this.add(new ICButton(log, "Re-fetch all IDLs", e -> {
+        this.add(new ICButton(log, "Re-fetch all IDLs (Slow)", e -> {
             List<String> cids = idlController.refreshAllInterfaceCacheEntries();
             if(cids.isEmpty()){
                 JOptionPane.showMessageDialog(this, "IDLs reloaded", "IC IDLs reloaded", JOptionPane.INFORMATION_MESSAGE);

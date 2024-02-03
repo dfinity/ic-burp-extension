@@ -23,7 +23,7 @@ public class IcBurpExtension implements BurpExtension {
 
     public static final String IC_DECODED_HEADER_NAME = "x-ic-decoded";
     public static final String IC_SIGN_IDENTITY_HEADER_NAME = "x-ic-sign-identity";
-    public static final String IC_ORIGIN_HEADER_NAME = "x-ic-origin";
+    public static final String IC_FRONTEND_HOSTNAME_HEADER_NAME = "x-ic-frontend-hostname";
     private AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
     private InternetIdentities internetIdentities;
 
@@ -53,7 +53,7 @@ public class IcBurpExtension implements BurpExtension {
         api.userInterface().registerHttpResponseEditorProvider(viewerProvider);
 
         // Register an HTTP handler that intercepts all requests to update the interface cache.
-        api.http().registerHttpHandler(new IcCacheRefresh(api.logging(), icTools, internetIdentities, canisterInterfaceCache, callRequestCache, Optional.empty(), Optional.empty()));
+        api.http().registerHttpHandler(new IcCacheRefresh(api.logging(), icTools, canisterInterfaceCache, internetIdentities, callRequestCache, Optional.empty(), Optional.empty()));
         api.http().registerHttpHandler(new IcSigning(api.logging(), icTools, tp, canisterInterfaceCache, internetIdentities));
 
         // Add Context Menu item to send IC requests to the repeater.

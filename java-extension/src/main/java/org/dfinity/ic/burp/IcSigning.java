@@ -68,23 +68,25 @@ public class IcSigning implements HttpHandler {
         try {
             String anchor = requestToBeSent.header(IC_SIGN_IDENTITY_HEADER_NAME).value();
             if(anchor.isBlank()){
-                topPanel.showErrorMessage("The message needs to have an anchor set in the " + IC_SIGN_IDENTITY_HEADER_NAME + " header.", "IC error.");
+                topPanel.showErrorMessage("The message needs to have an anchor set in the " + IC_SIGN_IDENTITY_HEADER_NAME + " header.", "IC error");
                 this.log.logToError("No anchor set in " + IC_SIGN_IDENTITY_HEADER_NAME + " header.");
                 return null;
             }
-            // Take the icOrigin header if present and otherwise the normal origin one as backup.
-            // The icOrigin header is set when decoding the request and finding the principal from an earlier call to get_delegation.
-            Optional<String> icOrigin = Optional.ofNullable(requestToBeSent.headerValue(IC_ORIGIN_HEADER_NAME));
-            String origin = icOrigin.orElse(requestToBeSent.headerValue("Origin"));
-            if(origin.isBlank()) {
-                topPanel.showErrorMessage("The origin header needs to be set to match the origin of the dApp.", "IC error.");
-                this.log.logToError("Empty Origin header for proxy request to " + requestToBeSent.url());
+            // Take the IC_FRONTEND_HOSTNAME_HEADER_NAME header if present and otherwise the origin is used one as backup.
+            // The IC_FRONTEND_HOSTNAME_HEADER_NAME header is set when decoding the request and finding the principal from an earlier call to get_delegation.
+            Optional<String> icFrontendHostname = Optional.ofNullable(requestToBeSent.headerValue(IC_FRONTEND_HOSTNAME_HEADER_NAME));
+            String frontendHostname = icFrontendHostname.orElse(requestToBeSent.headerValue("Origin"));
+            if(frontendHostname.isBlank()) {
+                topPanel.showErrorMessage("The the outgoing request requires either a valid origin header and/or the "
+                        + IC_FRONTEND_HOSTNAME_HEADER_NAME + "header needs to be set to match the frontendHostname used by the " +
+                        "dApp for it's internet identity.", "IC error");
+                this.log.logToError("Empty Origin and " +IC_FRONTEND_HOSTNAME_HEADER_NAME+ " header for proxy request to " + requestToBeSent.url());
                 return null;
             }
 
-            Optional<Identity> id = internetIdentities.findSignIdentity(anchor, origin);
+            Optional<Identity> id = internetIdentities.findSignIdentity(anchor, frontendHostname);
             if(id.isEmpty()){
-                topPanel.showErrorMessage("Could not retrieve a valid identity.", "IC error.");
+                topPanel.showErrorMessage("Could not retrieve a valid identity. \nIs this II onboarded and still active or has the passkey been removed?", "IC error");
                 this.log.logToError("Error retrieving signIdentity for anchor " + anchor + " and request URI " + requestToBeSent.url());
                 return null;
             }
@@ -92,10 +94,11 @@ public class IcSigning implements HttpHandler {
             byte[] newBody = icTools.encodeAndSignCanisterRequest(requestToBeSent.bodyToString(), idlopt, id.get());
             HttpRequest req = requestToBeSent.withRemovedHeader(IC_SIGN_IDENTITY_HEADER_NAME);
             req = req.withRemovedHeader(IC_DECODED_HEADER_NAME);
-            req = req.withRemovedHeader(IC_ORIGIN_HEADER_NAME);
+            req = req.withRemovedHeader(IC_FRONTEND_HOSTNAME_HEADER_NAME);
             req = req.withBody(ByteArray.byteArray(newBody));
             return RequestToBeSentAction.continueWith(req);
         } catch (IcToolsException e) {
+            topPanel.showErrorMessage("Encoding or re-signing the request failed. Sending the decoded version as fallback.", "IC error");
             this.log.logToError("Exception raised during re-signing of the request: " + e);
             return null;
         }
@@ -116,7 +119,6 @@ public class IcSigning implements HttpHandler {
             // This does not look like an IC request. We don't decode anything.
             return ResponseReceivedAction.continueWith(responseReceived);
         }
-
 
         if (!responseReceived.toolSource().isFromTool(ToolType.REPEATER) && !responseReceived.toolSource().isFromTool(ToolType.INTRUDER)) {
             // Currently only the requests that come from the repeater and intruder are decoded as these are the only tools that support request modification.

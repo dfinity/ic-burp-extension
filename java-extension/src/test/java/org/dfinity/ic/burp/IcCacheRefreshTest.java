@@ -87,7 +87,7 @@ class IcCacheRefreshTest {
         when(tools.getRequestMetadata(BODY_BYTES)).thenReturn(META_DATA);
 
         var log = mock(Logging.class);
-        cacheRefresh = new IcCacheRefresh(log, tools, internetIdentities, canisterInterfaceCache, callRequestCache, Optional.of(x -> x == request ? requestAction : null), Optional.of(x -> x == response ? responseAction : null));
+        cacheRefresh = new IcCacheRefresh(log, tools, canisterInterfaceCache, internetIdentities, callRequestCache, Optional.of(x -> x == request ? requestAction : null), Optional.of(x -> x == response ? responseAction : null));
         internetIdentities = new InternetIdentities(log, tools);
     }
 

@@ -133,7 +133,6 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
 
             // TODO This throws an exception from time to time. See notes for stacktrace.
             // TODO java.lang.IllegalArgumentException: fromIndex(1) > toIndex(0)
-
             HttpHeader icDecodedHeader = requestResponse.request().header(IcBurpExtension.IC_DECODED_HEADER_NAME);
             if (icDecodedHeader != null && icDecodedHeader.value().equals("True")) {
                 return false;
