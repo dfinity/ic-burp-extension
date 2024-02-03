@@ -54,7 +54,7 @@ class IcHttpRequestResponseViewerTest {
     @Mock
     private IcTools tools;
 
-    private void returnHttpHeader(boolean forRequest, Optional<String> contentType, Optional<String> contentLength) {
+    private void returnHttpHeader(boolean forRequest, Optional<String> contentType, Optional<String> contentLength, short status) {
 
         HttpHeader contentTypeHeader;
         if (contentType.isPresent()) {
@@ -73,12 +73,14 @@ class IcHttpRequestResponseViewerTest {
             contentLengthHeader = null;
         }
 
+
         if (forRequest) {
             when(request.header("Content-Type")).thenReturn(contentTypeHeader);
             when(request.header("Content-Length")).thenReturn(contentLengthHeader);
         } else {
             when(response.header("Content-Type")).thenReturn(contentTypeHeader);
             when(response.header("Content-Length")).thenReturn(contentLengthHeader);
+            when(response.statusCode()).thenReturn(status);
         }
     }
 
@@ -116,7 +118,7 @@ class IcHttpRequestResponseViewerTest {
             "/api/v2/canister/rrkah-fqaaa-aaaaa-aaaaq-cai/call,false",
             "/api/v2/canister/rrkah-fqaaa-aaaaa-aaaaq-cai/read_state,false"})
     public void shouldBeEnabledForIcRequestsAndResponses(String path, boolean isRequest) {
-        returnHttpHeader(isRequest, Optional.of("application/cbor"), Optional.of("123"));
+        returnHttpHeader(isRequest, Optional.of("application/cbor"), Optional.of("123"), (short) 200);
         when(request.path()).thenReturn(path);
         var res = new IcHttpRequestResponseViewer(api, tools, null, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
 
@@ -149,7 +151,7 @@ class IcHttpRequestResponseViewerTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     public void shouldBeDisabledIfContentTypeIsNotPresent(boolean isRequest) {
-        returnHttpHeader(isRequest, Optional.empty(), Optional.of("123"));
+        returnHttpHeader(isRequest, Optional.empty(), Optional.of("123"), (short) 200);
 
         var res = new IcHttpRequestResponseViewer(api, tools, null, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
 
@@ -159,7 +161,7 @@ class IcHttpRequestResponseViewerTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     public void shouldBeDisabledIfContentTypeIsWrong(boolean isRequest) {
-        returnHttpHeader(isRequest, Optional.of("application/json"), Optional.of("123"));
+        returnHttpHeader(isRequest, Optional.of("application/json"), Optional.of("123"), (short) 200);
 
         var res = new IcHttpRequestResponseViewer(api, tools, null, canisterInterfaceCache, callRequestCache, isRequest, Optional.empty()).isEnabledFor(requestResponse);
 

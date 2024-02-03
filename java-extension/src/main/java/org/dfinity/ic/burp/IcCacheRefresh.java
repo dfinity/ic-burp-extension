@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 public class IcCacheRefresh implements HttpHandler {
     private static final Pattern IC_API_PATH_REGEX = Pattern.compile("/api/v2/canister/(?<cid>[^/]+)/(?<rtype>query|call|read_state)");
     private static final String II_CANISTER_ID = "rdmx6-jaaaa-aaaaa-aaadq-cai";
+    public static final String GET_DELEGATION_REGEX = "[\\S\\s]*arg.*\\s*(?<anchor>[\\d_]*)\\s*:.*\\s*.*\\\"(?<origin>http.*)\\\"[\\S\\s]*";
     private final Logging log;
     private final IcTools icTools;
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
@@ -56,13 +57,12 @@ public class IcCacheRefresh implements HttpHandler {
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent requestToBeSent) {
         try {
             var urlInfo = getUrlInfo(requestToBeSent.path());
-            if (urlInfo.isPresent()) {
+            if (urlInfo.isPresent() && requestToBeSent.body().getBytes().length > 0) {
                 canisterInterfaceCache.get(urlInfo.get().canisterId);
 
                 RequestMetadata metadata = icTools.getRequestMetadata(requestToBeSent.body().getBytes());
                 // Get the origin, anchor, principal mapping for re-signing of requests.
-                if(metadata.canisterMethod().isPresent() && urlInfo.get().canisterId.equals(II_CANISTER_ID) && metadata.canisterMethod().isPresent() && metadata.canisterMethod().get().equals("get_delegation")){
-                    log.logToOutput("Fetching CanisterCacheInfo");
+                if(metadata.canisterMethod().isPresent() && urlInfo.get().canisterId.equals(II_CANISTER_ID) && metadata.canisterMethod().get().equals("get_delegation")){
                     CanisterCacheInfo info = canisterInterfaceCache.get(II_CANISTER_ID).join();
                     if(info == null){
                         log.logToError("Could not find a valid IDL for the II canister. This prevents keeping a " +
@@ -70,18 +70,14 @@ public class IcCacheRefresh implements HttpHandler {
                                 "requests sent to the repeater or intruder.");
                     } else {
                         // Extract the anchor and origin and store them in a mapping.
-                        log.logToOutput("Extracting requestInfo");
                         RequestInfo requestInfo =icTools.decodeCanisterRequest(requestToBeSent.body().getBytes(), info.getActiveCanisterInterface());
 
-                        Pattern getDelegationRegex = Pattern.compile("[\\S\\s]*arg.*\\s*(?<anchor>[\\d_]*)\\s*:.*\\s*.*\\\"(?<origin>http.*)\\\"[\\S\\s]*", Pattern.MULTILINE);
+                        Pattern getDelegationRegex = Pattern.compile(GET_DELEGATION_REGEX, Pattern.MULTILINE);
                         Matcher matcher = getDelegationRegex.matcher(requestInfo.decodedRequest());
                         if (matcher.matches() && !matcher.group("anchor").isBlank() && !matcher.group("origin").isBlank()) {
                             String anchor = matcher.group("anchor").replace("_", "");
                             String origin = matcher.group("origin");
-                            log.logToOutput("requestInfo.decodedRequest() anchor: " + anchor);
-                            log.logToOutput("requestInfo.decodedRequest() origin: " + origin);
                             internetIdentities.updatePrincipalToAnchorMap(anchor, origin);
-
                         }
                     }
                 }

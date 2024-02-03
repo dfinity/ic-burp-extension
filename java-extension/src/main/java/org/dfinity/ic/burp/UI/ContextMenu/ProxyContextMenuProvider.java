@@ -81,11 +81,11 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
             Optional<String> idl = canisterCacheInfo.join().getActiveCanisterInterface();
             try {
                 RequestInfo requestInfo = icTools.decodeCanisterRequest(req.body().getBytes(), idl);
-                Optional<List<String>> result = internetIdentities.findAnchor(requestInfo.senderInfo(), req.headerValue("Origin"));
+                Optional<List<String>> result = internetIdentities.findAnchor(requestInfo.senderInfo().sender(), req.headerValue("Origin"));
+                req = req.withAddedHeader(IC_DECODED_HEADER_NAME, "True");
                 if(result.isPresent()) {
-                    req = req.withAddedHeader(IC_DECODED_HEADER_NAME, "True");
                     req = req.withAddedHeader(IC_SIGN_IDENTITY_HEADER_NAME, result.get().get(0));
-                    req = req.withAddedHeader(IC_ORIGIN_HEADER_NAME, result.get().get(1));
+                    req = req.withAddedHeader(IC_FRONTEND_HOSTNAME_HEADER_NAME, result.get().get(1));
                 }
                 httpRequestList.add(req.withBody(requestInfo.decodedRequest()));
 

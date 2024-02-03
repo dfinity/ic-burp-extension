@@ -23,7 +23,7 @@ public class IcBurpExtension implements BurpExtension {
 
     public static final String IC_DECODED_HEADER_NAME = "x-ic-decoded";
     public static final String IC_SIGN_IDENTITY_HEADER_NAME = "x-ic-sign-identity";
-    public static final String IC_ORIGIN_HEADER_NAME = "x-ic-origin";
+    public static final String IC_FRONTEND_HOSTNAME_HEADER_NAME = "x-ic-frontend-hostname";
     private AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
     private InternetIdentities internetIdentities;
 

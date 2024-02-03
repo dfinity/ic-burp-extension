@@ -17,10 +17,10 @@ public class InternetIdentity {
     // Long-term ED25519 key which is added as passkey to the internet identity.
     private Identity passkey;
     // Short term ED25519 key that gets generated to re-sign a request. A delegation is obtained for this identity so
-    // that this key represents the II anchor. This key and delegation needs to be generated for every origin and expires
+    // that this key represents the II anchor. This key and delegation needs to be generated for every frontendHostname and expires
     // by default after 30 minutes.
     private Identity sessionKey;
-    // Maps each origin onto an DelegatedEd25519Identity that can sign for it.
+    // Maps each frontendHostname onto an DelegatedEd25519Identity that can sign for it.
     private final Map<String, Identity> signIdentityMap;
     private Optional<String> code;
     private final Date creationDate;
@@ -76,17 +76,17 @@ public class InternetIdentity {
         return this.passkey;
     }
 
-    public Optional<Identity> getSignIdentity(String origin) {
-        origin = origin.toLowerCase();
-        if(signIdentityMap.get(origin) != null) {
-            return Optional.of(signIdentityMap.get(origin));
+    public Optional<Identity> getSignIdentity(String frontendHostname) {
+        frontendHostname = frontendHostname.toLowerCase();
+        if(signIdentityMap.get(frontendHostname) != null) {
+            return Optional.of(signIdentityMap.get(frontendHostname));
         }
 
         try {
-            DelegationInfo delegationInfo = this.icTools.internetIdentityGetDelegation(anchor, passkey, origin, sessionKey);
+            DelegationInfo delegationInfo = this.icTools.internetIdentityGetDelegation(anchor, passkey, frontendHostname, sessionKey);
             // Pem for a delegated identity is never empty.
             Identity signIdentity = Identity.delegatedEd25519Identity(sessionKey.getPem().get(), delegationInfo);
-            signIdentityMap.put(origin, signIdentity);
+            signIdentityMap.put(frontendHostname, signIdentity);
             return Optional.of(signIdentity);
         } catch (IcToolsException e) {
             return Optional.empty();

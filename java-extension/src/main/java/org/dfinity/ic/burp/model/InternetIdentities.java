@@ -5,7 +5,6 @@ import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.Identity;
 import org.dfinity.ic.burp.tools.model.Principal;
-import org.dfinity.ic.burp.tools.model.RequestSenderInfo;
 
 import javax.swing.table.AbstractTableModel;
 import java.util.*;
@@ -20,8 +19,8 @@ public class InternetIdentities extends AbstractTableModel {
 
     private Optional<String> selectedII;
 
-    // Maps principals discovered in get_delegation messages to anchor and origin. To avoid a dependency on JavaFx we use
-    // a list instead of Pair. The first element in the list is the anchor and the second is the origin.
+    // Maps principals discovered in get_delegation messages to anchor and frontendHostname. To avoid a dependency on JavaFx we use
+    // a list instead of Pair. The first element in the list is the anchor and the second is the frontendHostname.
     private Map<Principal, List<String>> principalToAnchorMap;
     public InternetIdentities(Logging log, IcTools tools){
         this.log = log;
@@ -73,43 +72,36 @@ public class InternetIdentities extends AbstractTableModel {
         return r;
     }
 
+
     /**
-     * This method returns the correct identity that should be used to re-sign the request.
-     * It looks if the x-ic-sign-identity header is present, it verifies whether an identity with this anchor is available
-     * and generates an identity from the pem file for this identity.
-     *
-     * If no such header exists, we go through the list of all InternetIdentities to find one that results in the same
-     * principal as the one found in the sender field of the request.
-     *
-     * Otherwise, we return an error.
-     * @return The anchor and origin or Empty if none was found that matches the sender principal for this origin.
-     * TODO Should we call iiIsPasskeyRegistered to verify that the passkey is still valid?
+     * This method tries to find the anchor that corresponds to the sender principal.
+     * @param sender The requestSenderInfo from the request being sent.
+     * @param frontendHostname The frontendHostname header which is the default hostname used to generate a session key. Some dApps use an
+     *               alternative frontendHostname. In that case, we should have seen a get_delegation message containing that frontendHostname
+     *               and the anchor. This information is stored in `principalToAnchorMap`.
+     * @return  Returns a list with two elements. The first is the anchor. The second is the frontendHostname/hostname to be used
+     * to obtain a session key for the same principal as found in the requestSenderInfo.
      */
-    public Optional<List<String>> findAnchor(RequestSenderInfo requestSenderInfo, String origin) {
-        log.logToOutput("findAnchor for " + requestSenderInfo + " and " + origin);
-        if(requestSenderInfo.sender().equals(Principal.anonymous())){
-            return Optional.of(new ArrayList<>(Arrays.asList("anonymous", origin)));
+    public Optional<List<String>> findAnchor(Principal sender, String frontendHostname) {
+        if(sender.equals(Principal.anonymous())){
+            return Optional.of(new ArrayList<>(Arrays.asList("anonymous", frontendHostname)));
         }
 
-        if(origin == null) return Optional.empty();
-        log.logToOutput("findAnchor checking principalToAnchorMap " + principalToAnchorMap.toString());
-        if(principalToAnchorMap.get(requestSenderInfo.sender()) != null){
-            log.logToOutput("findAnchor checking principalToAnchorMap found match: " + principalToAnchorMap.get(requestSenderInfo.sender()));
-            return Optional.of(principalToAnchorMap.get(requestSenderInfo.sender()));
+        if(frontendHostname == null) return Optional.empty();
+        if(principalToAnchorMap.get(sender) != null){
+            return Optional.of(principalToAnchorMap.get(sender));
         }
 
         for(Map.Entry<String, InternetIdentity> entry : identities.entrySet()){
             InternetIdentity ii = entry.getValue();
-            log.logToOutput("findAnchor iterating through II with anchor " + ii.getAnchor() + "\n" + ii);
 
             if(!ii.getState().equals(IiState.Active)){
                 continue;
             }
             try {
-                Principal p = this.tools.internetIdentityGetPrincipal(entry.getKey(), ii.getPasskey(), origin);
-                log.logToOutput("findAnchor comparing principal " + p + " with sender " + requestSenderInfo.sender());
-                if (p.equals(requestSenderInfo.sender())){
-                    return Optional.of(new ArrayList<>(Arrays.asList(ii.getAnchor(), origin)));
+                Principal p = this.tools.internetIdentityGetPrincipal(entry.getKey(), ii.getPasskey(), frontendHostname);
+                if (p.equals(sender)){
+                    return Optional.of(new ArrayList<>(Arrays.asList(ii.getAnchor(), frontendHostname)));
                 }
             }
             catch (IcToolsException e) {
@@ -121,25 +113,35 @@ public class InternetIdentities extends AbstractTableModel {
         return Optional.empty();
     }
 
-    public Optional<Identity> findSignIdentity(String anchor, String origin) throws IcToolsException {
+
+    /**
+     * Obtain the Identity which can be used to sign the outgoing request which maintain the same InternetIdentity and thus
+     * the same principal.
+     * @param anchor    The anchor for which to get the
+     * @param frontendHostname    The hostname to use to derive the s
+     * @return          The identity including a delegation for the session key for the II linked to the anchor for the given frontendHostname. This Identity can be used to re-sign outgoing requests.
+     * @throws IcToolsException If an error occurs during delegation issuing, e.g., the signIdentity is not registered as passkey for the given anchor
+     */
+    public Optional<Identity> findSignIdentity(String anchor, String frontendHostname) throws IcToolsException {
         anchor = anchor.toLowerCase();
         if(anchor.equals("anonymous")){
             return Optional.of(Identity.anonymousIdentity());
         }
         Optional<InternetIdentity> ii = this.getIdentity(anchor);
         if(ii.isEmpty()) return Optional.empty();
-        return ii.get().getSignIdentity(origin);
+        return ii.get().getSignIdentity(frontendHostname);
     }
 
-    public void updatePrincipalToAnchorMap(String anchor, String origin) {
+    public void updatePrincipalToAnchorMap(String anchor, String frontendHostname) {
         Optional<InternetIdentity> ii = this.getIdentity(anchor);
         if(ii.isPresent()) {
             try {
-                Principal p = this.tools.internetIdentityGetPrincipal(anchor, ii.get().getPasskey(), origin);
+                Principal p = this.tools.internetIdentityGetPrincipal(anchor, ii.get().getPasskey(), frontendHostname);
                 List<String> val = new ArrayList<>();
                 val.add(anchor);
-                val.add(origin);
+                val.add(frontendHostname);
                 log.logToOutput("Adding to principalToAnchorMap: " + p.toString() + " and " + val);
+                // The principal should be unique for every anchor/frontendHostname combination. Hence, we shouldn't risk collision in this map.
                 this.principalToAnchorMap.put(p, val);
             } catch (IcToolsException e) {
                 log.logToError("Error occurred trying to update the principal to anchor map: " + e.getStackTraceAsString());
