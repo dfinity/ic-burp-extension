@@ -16,6 +16,15 @@ pub struct DiscoverCanisterInterfaceResult {
     canister_interface: *const c_char,
 }
 
+impl DiscoverCanisterInterfaceResult {
+    pub fn error(err: String) -> Self {
+        DiscoverCanisterInterfaceResult {
+            error_message: str_to_ptr(err),
+            canister_interface: null(),
+        }
+    }
+}
+
 impl From<LookupResult<Option<String>>> for DiscoverCanisterInterfaceResult {
     fn from(result: LookupResult<Option<String>>) -> Self {
         match result {
@@ -106,6 +115,22 @@ pub struct DecodeCanisterRequestResult {
     canister_method: *const c_char,
 }
 
+impl DecodeCanisterRequestResult {
+    pub fn error(err: String) -> Self {
+        DecodeCanisterRequestResult {
+            error_message: str_to_ptr(err),
+            request_type: null(),
+            request_id: null(),
+            sender: null(),
+            pubkey: null(),
+            sig: null(),
+            delegation: null(),
+            decoded_request: null(),
+            canister_method: null(),
+        }
+    }
+}
+
 impl From<EncodingResult<RequestInfo>> for DecodeCanisterRequestResult {
     fn from(result: EncodingResult<RequestInfo>) -> Self {
         match result {
@@ -158,6 +183,15 @@ impl From<EncodingResult<RequestInfo>> for DecodeCanisterRequestResult {
 pub struct DecodeCanisterResponseResult {
     error_message: *const c_char,
     decoded_response: *const c_char,
+}
+
+impl DecodeCanisterResponseResult {
+    pub fn error(err: String) -> Self {
+        DecodeCanisterResponseResult {
+            error_message: str_to_ptr(err),
+            decoded_response: null(),
+        }
+    }
 }
 
 impl From<EncodingResult<String>> for DecodeCanisterResponseResult {

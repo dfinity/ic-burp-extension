@@ -23,7 +23,11 @@ mod model;
 #[no_mangle]
 #[tokio::main]
 pub async extern fn discover_canister_interface(canister_id: *const c_char) -> DiscoverCanisterInterfaceResult {
-    canister_lookup::discover_canister_interface(to_string(canister_id), None).await.into()
+    let cid = match to_string(canister_id) {
+        Ok(s) => s,
+        Err(e) => return DiscoverCanisterInterfaceResult::error(e),
+    };
+    canister_lookup::discover_canister_interface(cid, None).await.into()
 }
 
 #[no_mangle]
@@ -36,7 +40,12 @@ pub extern fn decode_canister_request(encoded_cbor_request: *const u8, encoded_c
     let canister_interface = if canister_interface_opt == null() {
         None
     } else {
-        Some(to_string(canister_interface_opt))
+        Some(
+            match to_string(canister_interface_opt) {
+                Ok(s) => s,
+                Err(e) => return DecodeCanisterRequestResult::error(e),
+            }
+        )
     };
 
     encode::decode_canister_request(to_vec(encoded_cbor_request, encoded_cbor_request_size), canister_interface).into()
@@ -47,9 +56,13 @@ pub extern fn decode_canister_response(encoded_cbor_response: *const u8, encoded
     let canister_interface_info = if canister_interface_opt == null() || canister_method_opt == null() {
         None
     } else {
-        Some(encode::model::CanisterInterfaceInfo {
-            canister_interface: to_string(canister_interface_opt),
-            canister_method: to_string(canister_method_opt),
+        Some(match (to_string(canister_interface_opt), to_string(canister_method_opt)) {
+            (Ok(s1), Ok(s2)) => encode::model::CanisterInterfaceInfo {
+                canister_interface: s1,
+                canister_method: s2,
+            },
+            (Err(e1), _) => return DecodeCanisterResponseResult::error(e1),
+            (_, Err(e2)) => return DecodeCanisterResponseResult::error(e2),
         })
     };
     encode::decode_canister_response(to_vec(encoded_cbor_response, encoded_cbor_response_size), canister_interface_info).into()
@@ -71,11 +84,17 @@ pub extern fn generate_ed25519_key() -> GenerateEd25519KeyResult {
 
 #[no_mangle]
 pub extern fn encode_and_sign_canister_request(decoded_request: *const c_char, canister_interface_opt: *const c_char, identity_type: *const c_char, identity_pem_opt: *const c_char, identity_delegation_from_pubkey_opt: *const c_char, identity_delegation_chain_opt: *const c_char) -> EncodeAndSignCanisterRequestResult {
-    let req = to_string(decoded_request);
+    let req = match to_string(decoded_request) {
+        Ok(s) => s,
+        Err(e) => return EncodeAndSignCanisterRequestResult::error(e),
+    };
     let canister_interface = if canister_interface_opt == null() {
         None
     } else {
-        Some(to_string(canister_interface_opt))
+        Some(match to_string(canister_interface_opt) {
+            Ok(s) => s,
+            Err(e) => return EncodeAndSignCanisterRequestResult::error(e),
+        })
     };
     match create_identity(identity_type, identity_pem_opt, identity_delegation_from_pubkey_opt, identity_delegation_chain_opt) {
         Ok(identity) => encode::encode_and_sign_canister_request(req, canister_interface, identity).into(),
@@ -86,8 +105,12 @@ pub extern fn encode_and_sign_canister_request(decoded_request: *const c_char, c
 #[no_mangle]
 #[tokio::main]
 pub async extern fn internet_identity_add_tentative_passkey(anchor: *const c_char, identity_type: *const c_char, identity_pem_opt: *const c_char, identity_delegation_from_pubkey_opt: *const c_char, identity_delegation_chain_opt: *const c_char) -> InternetIdentityAddTentativePasskeyResult {
+    let anc = match to_string(anchor) {
+        Ok(s) => s,
+        Err(e) => return InternetIdentityAddTentativePasskeyResult::error(e),
+    };
     match create_identity(identity_type, identity_pem_opt, identity_delegation_from_pubkey_opt, identity_delegation_chain_opt) {
-        Ok(identity) => internet_identity::internet_identity_add_tentative_passkey(to_string(anchor), identity).await.into(),
+        Ok(identity) => internet_identity::internet_identity_add_tentative_passkey(anc, identity).await.into(),
         Err(e) => InternetIdentityAddTentativePasskeyResult::error(e),
     }
 }
@@ -95,8 +118,12 @@ pub async extern fn internet_identity_add_tentative_passkey(anchor: *const c_cha
 #[no_mangle]
 #[tokio::main]
 pub async extern fn internet_identity_is_passkey_registered(anchor: *const c_char, identity_type: *const c_char, identity_pem_opt: *const c_char, identity_delegation_from_pubkey_opt: *const c_char, identity_delegation_chain_opt: *const c_char) -> InternetIdentityIsPasskeyRegisteredResult {
+    let anc = match to_string(anchor) {
+        Ok(s) => s,
+        Err(e) => return InternetIdentityIsPasskeyRegisteredResult::error(e),
+    };
     match create_identity(identity_type, identity_pem_opt, identity_delegation_from_pubkey_opt, identity_delegation_chain_opt) {
-        Ok(identity) => internet_identity::internet_identity_is_passkey_registered(to_string(anchor), identity).await.into(),
+        Ok(identity) => internet_identity::internet_identity_is_passkey_registered(anc, identity).await.into(),
         Err(e) => InternetIdentityIsPasskeyRegisteredResult::error(e),
     }
 }
@@ -104,8 +131,13 @@ pub async extern fn internet_identity_is_passkey_registered(anchor: *const c_cha
 #[no_mangle]
 #[tokio::main]
 pub async extern fn internet_identity_get_principal(anchor: *const c_char, identity_type: *const c_char, identity_pem_opt: *const c_char, identity_delegation_from_pubkey_opt: *const c_char, identity_delegation_chain_opt: *const c_char, frontend_hostname: *const c_char) -> InternetIdentityGetPrincipalResult {
+    let (anc, host) = match (to_string(anchor), to_string(frontend_hostname)) {
+        (Ok(s1), Ok(s2)) => (s1, s2),
+        (Err(e1), _) => return InternetIdentityGetPrincipalResult::error(e1),
+        (_, Err(e2)) => return InternetIdentityGetPrincipalResult::error(e2),
+    };
     match create_identity(identity_type, identity_pem_opt, identity_delegation_from_pubkey_opt, identity_delegation_chain_opt) {
-        Ok(identity) => { internet_identity::internet_identity_get_principal(to_string(anchor), identity, to_string(frontend_hostname)).await.into() }
+        Ok(identity) => { internet_identity::internet_identity_get_principal(anc, identity, host).await.into() }
         Err(e) => InternetIdentityGetPrincipalResult::error(e),
     }
 }
@@ -113,27 +145,32 @@ pub async extern fn internet_identity_get_principal(anchor: *const c_char, ident
 #[no_mangle]
 #[tokio::main]
 pub async extern fn internet_identity_get_delegation(anchor: *const c_char, identity_type: *const c_char, identity_pem_opt: *const c_char, identity_delegation_from_pubkey_opt: *const c_char, identity_delegation_chain_opt: *const c_char, frontend_hostname: *const c_char, session_identity_type: *const c_char, session_identity_pem_opt: *const c_char, session_identity_delegation_from_pubkey_opt: *const c_char, session_identity_delegation_chain_opt: *const c_char) -> InternetIdentityGetDelegationResult {
+    let (anc, host) = match (to_string(anchor), to_string(frontend_hostname)) {
+        (Ok(s1), Ok(s2)) => (s1, s2),
+        (Err(e1), _) => return InternetIdentityGetDelegationResult::error(e1),
+        (_, Err(e2)) => return InternetIdentityGetDelegationResult::error(e2),
+    };
     let sign_identity = match create_identity(identity_type, identity_pem_opt, identity_delegation_from_pubkey_opt, identity_delegation_chain_opt) {
         Ok(identity) => identity,
         Err(e) => return InternetIdentityGetDelegationResult::error(e),
     };
     match create_identity(session_identity_type, session_identity_pem_opt, session_identity_delegation_from_pubkey_opt, session_identity_delegation_chain_opt) {
         Ok(session_identity) => {
-            internet_identity::internet_identity_get_delegation(to_string(anchor), sign_identity, to_string(frontend_hostname), session_identity).await.into()
+            internet_identity::internet_identity_get_delegation(anc, sign_identity, host, session_identity).await.into()
         }
         Err(e) => InternetIdentityGetDelegationResult::error(e),
     }
 }
 
 fn create_identity(identity_type: *const c_char, identity_pem_opt: *const c_char, identity_delegation_from_pubkey_opt: *const c_char, identity_delegation_chain_opt: *const c_char) -> Result<Arc<dyn Identity>, String> {
-    let typ = to_string(identity_type);
+    let typ = to_string(identity_type)?;
     match typ.to_uppercase().as_str() {
         "ANONYMOUS" => Ok(Arc::new(AnonymousIdentity {})),
         "ED25519" => {
-            create_key_identity(Arc::new(BasicIdentity::from_pem(to_string(identity_pem_opt).as_bytes()).map_err(|x| x.to_string())?), identity_delegation_from_pubkey_opt, identity_delegation_chain_opt)
+            create_key_identity(Arc::new(BasicIdentity::from_pem(to_string(identity_pem_opt)?.as_bytes()).map_err(|x| x.to_string())?), identity_delegation_from_pubkey_opt, identity_delegation_chain_opt)
         }
         "SECP256K1" => {
-            create_key_identity(Arc::new(Secp256k1Identity::from_pem(to_string(identity_pem_opt).as_bytes()).map_err(|x| x.to_string())?), identity_delegation_from_pubkey_opt, identity_delegation_chain_opt)
+            create_key_identity(Arc::new(Secp256k1Identity::from_pem(to_string(identity_pem_opt)?.as_bytes()).map_err(|x| x.to_string())?), identity_delegation_from_pubkey_opt, identity_delegation_chain_opt)
         }
         _ => Err(format!("unknown identity_type: {typ}")),
     }
@@ -143,8 +180,8 @@ fn create_key_identity(identity: Arc<dyn Identity>, identity_delegation_from_pub
     if identity_delegation_from_pubkey_opt == null() || identity_delegation_chain_opt == null() {
         Ok(identity)
     } else {
-        let from_key = base64::engine::general_purpose::STANDARD_NO_PAD.decode(to_string(identity_delegation_from_pubkey_opt)).map_err(|e| e.to_string())?;
-        let del_identity = DelegatedIdentity::new(from_key, Box::new(identity), string_to_delegation(to_string(identity_delegation_chain_opt))?);
+        let from_key = base64::engine::general_purpose::STANDARD_NO_PAD.decode(to_string(identity_delegation_from_pubkey_opt)?).map_err(|e| e.to_string())?;
+        let del_identity = DelegatedIdentity::new(from_key, Box::new(identity), string_to_delegation(to_string(identity_delegation_chain_opt)?)?);
         Ok(Arc::new(del_identity))
     }
 }
@@ -197,9 +234,9 @@ fn string_to_delegation(delegations: String) -> Result<Vec<SignedDelegation>, St
 }
 
 /// Convert a native string to a Rust string
-fn to_string(pointer: *const c_char) -> String {
+fn to_string(pointer: *const c_char) -> Result<String, String> {
     let slice = unsafe { CStr::from_ptr(pointer).to_bytes() };
-    std::str::from_utf8(slice).unwrap().to_string()
+    Ok(std::str::from_utf8(slice).map_err(|e| e.to_string())?.to_string())
 }
 
 /// Convert a Rust string to a native string
@@ -247,7 +284,7 @@ mod tests {
         let resp = generate_ed25519_key();
 
         assert_eq!(resp.error_message, null());
-        let pem = to_string(resp.pem_encoded_key);
+        let pem = to_string(resp.pem_encoded_key).unwrap();
         assert!(BasicIdentity::from_pem(pem.as_bytes()).is_ok());
     }
 
@@ -262,7 +299,7 @@ mod tests {
     #[test]
     fn create_basic_identity() {
         let key = generate_ed25519_key().pem_encoded_key;
-        let pem = to_string(key);
+        let pem = to_string(key).unwrap();
         let basic = BasicIdentity::from_pem(pem.as_bytes()).unwrap();
         let identity = create_identity(str_to_ptr("ED25519".to_string()), key, null(), null());
 
@@ -273,9 +310,9 @@ mod tests {
     #[test]
     fn create_delegated_identity() {
         let key = generate_ed25519_key().pem_encoded_key;
-        let pem = to_string(key);
+        let pem = to_string(key).unwrap();
         let delegation_target = BasicIdentity::from_pem(pem.as_bytes()).unwrap();
-        let delegation_source = BasicIdentity::from_pem(to_string(generate_ed25519_key().pem_encoded_key).as_bytes()).unwrap();
+        let delegation_source = BasicIdentity::from_pem(to_string(generate_ed25519_key().pem_encoded_key).unwrap().as_bytes()).unwrap();
         let delegation_unsigned = Delegation {
             pubkey: delegation_target.public_key().unwrap(),
             expiration: u64::MAX,
