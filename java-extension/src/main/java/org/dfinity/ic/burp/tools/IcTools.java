@@ -1,6 +1,13 @@
 package org.dfinity.ic.burp.tools;
 
-import org.dfinity.ic.burp.tools.model.*;
+import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
+import org.dfinity.ic.burp.tools.model.DelegationInfo;
+import org.dfinity.ic.burp.tools.model.IcToolsException;
+import org.dfinity.ic.burp.tools.model.Identity;
+import org.dfinity.ic.burp.tools.model.Principal;
+import org.dfinity.ic.burp.tools.model.RequestDecoded;
+import org.dfinity.ic.burp.tools.model.RequestEncoded;
+import org.dfinity.ic.burp.tools.model.RequestMetadata;
 
 import java.util.Optional;
 
@@ -32,7 +39,7 @@ public interface IcTools {
      * @return information about the request, including the CBOR body decoded to JSON and the decoded CANDID payload if any
      * @throws IcToolsException if decoding fails
      */
-    RequestInfo decodeCanisterRequest(byte[] encodedCborRequest, Optional<String> canisterInterface) throws IcToolsException;
+    RequestDecoded decodeCanisterRequest(byte[] encodedCborRequest, Optional<String> canisterInterface) throws IcToolsException;
 
     /**
      * Decodes a CBOR response body received from the IC HTTP API, including the eventually embedded CANDID payload.
@@ -59,10 +66,21 @@ public interface IcTools {
      * @param decodedRequest    the decoded request, as returned by {@link #decodeCanisterRequest(byte[], Optional)}
      * @param canisterInterface the canister CANDID interface (contents of the DID file), if known, if this is omitted CANDID types are guessed and the IC might reject the crafted message
      * @param signIdentity      the identity that should be used to sign the request
-     * @return the CBOR encoded and signed request
+     * @return information about the request, including the CBOR encoded and signed request
      * @throws IcToolsException if an error occurs during encoding or signing
      */
-    byte[] encodeAndSignCanisterRequest(String decodedRequest, Optional<String> canisterInterface, Identity signIdentity) throws IcToolsException;
+    RequestEncoded encodeAndSignCanisterRequest(String decodedRequest, Optional<String> canisterInterface, Identity signIdentity) throws IcToolsException;
+
+    /**
+     * Polls for the response of a call request and returns the decoded CANDID part of the response.
+     *
+     * @param callRequestMetadata the metadata of the call request for which the response should be retrieved
+     * @param canisterInterface   the canister CANDID interface and the canister method called, if known
+     * @param signIdentity        the identity that was used to sign the call request
+     * @return the decoded CANDID payload of the response
+     * @throws IcToolsException if an error occurs during response fetching or decoding
+     */
+    String getCanisterResponseForCallRequest(RequestMetadata callRequestMetadata, Optional<String> canisterInterface, Identity signIdentity) throws IcToolsException;
 
     /**
      * Adds the provided identity as tentative passkey to the given anchor.
