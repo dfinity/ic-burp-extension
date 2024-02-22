@@ -429,12 +429,12 @@ mod tests {
     use std::sync::Arc;
 
     use base64::Engine;
-    use candid::Principal;
-    use ic_agent::Identity;
+    use candid::{Encode, Principal};
+    use ic_agent::{Agent, Identity};
     use ic_agent::identity::{AnonymousIdentity, BasicIdentity};
     use ring::signature::Ed25519KeyPair;
 
-    use crate::encode::{decode_canister_request, decode_canister_response, encode_and_sign_canister_request, get_request_metadata};
+    use crate::encode::{decode_canister_request, decode_canister_response, encode_and_sign_canister_request, get_canister_response_for_call_request, get_request_metadata};
     use crate::encode::model::{CanisterInterfaceInfo, Request, RequestMetadata, RequestSenderDelegation, RequestSenderInfo};
 
     static QUERY_REQUEST: &str = "D9D9F7A167636F6E74656E74A66361726759016B4449444C056D7B6C02007101716D016E7A6C05EFD6E40271E1EDEB4A71A2F5ED880400C6A4A1980602B0F1B99806030104282F5F6170702F696D6D757461626C652F6173736574732F4C6F676F2E66343530363237352E63737303474554000704486F73740B6E6E732E6963302E6170700661636365707412746578742F6373732C2A2F2A3B713D302E31097365632D63682D756100107365632D63682D75612D6D6F62696C65023F30127365632D63682D75612D706C6174666F726D0222220A757365722D6167656E74744D6F7A696C6C612F352E30202857696E646F7773204E542031302E303B2057696E36343B2078363429204170706C655765624B69742F3533372E333620284B48544D4C2C206C696B65204765636B6F29204368726F6D652F3131362E302E353834352E313431205361666172692F3533372E33360F4163636570742D456E636F64696E6717677A69702C206465666C6174652C206964656E746974790102006B63616E69737465725F69644A000000000000000801016E696E67726573735F6578706972791B17823E88F636F9006B6D6574686F645F6E616D656C687474705F726571756573746C726571756573745F747970656571756572796673656E6465724104";
@@ -867,5 +867,28 @@ mod tests {
             }
             _ => { panic!("should be readstate request") }
         }
+    }
+
+    // this test is ignored by default because it interacts with the whoami canister on mainnet
+    #[tokio::test]
+    #[ignore]
+    async fn make_call_request_and_retrieve_response() {
+        let agent = Agent::builder().with_url("https://icp-api.io").build().unwrap();
+        let whoami_canister = Principal::from_text("ivcos-eqaaa-aaaab-qablq-cai").unwrap();
+        let whoami_canister_interface = Some(read_test_file("whoami.idl"));
+        let rid = agent.update(&whoami_canister, "whoami").with_arg(Encode!(&()).unwrap()).call().await.unwrap();
+        let metadata = RequestMetadata::Call {
+            request_id: rid.to_vec(),
+            sender_info: RequestSenderInfo {
+                sender: Principal::anonymous(),
+                pubkey: None,
+                sig: None,
+                delegation: vec![],
+            },
+            canister_id: whoami_canister,
+            canister_method: "whoami".to_string(),
+        };
+        let res = get_canister_response_for_call_request(metadata, whoami_canister_interface, Arc::new(AnonymousIdentity {})).await.unwrap();
+        assert_eq!("(principal \"2vxsx-fae\")", res);
     }
 }
