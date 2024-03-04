@@ -5,9 +5,17 @@ import org.dfinity.ic.burp.UI.ICButton;
 import org.dfinity.ic.burp.controller.IiController;
 import org.dfinity.ic.burp.model.InternetIdentities;
 
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
 import javax.swing.table.DefaultTableCellRenderer;
-import java.awt.*;
+import java.awt.Component;
+import java.awt.Dimension;
 import java.util.Optional;
 
 public class InternetIdentityPanel extends JPanel {
@@ -59,13 +67,19 @@ public class InternetIdentityPanel extends JPanel {
         this.add(reactivateButton);
         this.add(Box.createRigidArea(new Dimension(0, 5)));
 
+        JButton exportDelegationButton = new ICButton(log, "Get delegation", e -> {
+            iiController.getDelegation();
+        });
+        this.add(exportDelegationButton);
+        this.add(Box.createRigidArea(new Dimension(0, 5)));
+
         this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         this.setAlignmentX(Component.LEFT_ALIGNMENT);
-        this.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        this.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
     }
 
-    public Optional<String> getSelectedIiAnchor(){
-        if(iiTable.getSelectedRow() < 0 || iiTable.getSelectedColumn() < 0){
+    public Optional<String> getSelectedIiAnchor() {
+        if (iiTable.getSelectedRow() < 0 || iiTable.getSelectedColumn() < 0) {
             return Optional.empty();
         }
         Optional<Object> val = Optional.ofNullable(iiTable.getValueAt(iiTable.getSelectedRow(), 0));
