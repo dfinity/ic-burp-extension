@@ -157,7 +157,7 @@ public class IcSigning implements HttpHandler {
             Optional<CanisterInterfaceInfo> canisterInterfaceInfo = canisterInterface.flatMap(s -> metadata.canisterMethod().map(m -> new CanisterInterfaceInfo(s, m)));
 
 
-            if (urlPathInfo.requestType() == RequestType.CALL && metadata.type() == RequestType.CALL && metadata.requestId().isPresent() && callRequestSignIdentityCache.getIfPresent(metadata.requestId().get()) != null) {
+            if (urlPathInfo.requestType() == RequestType.CALL && metadata.type() == RequestType.CALL && responseReceived.statusCode() == 202 && metadata.requestId().isPresent() && callRequestSignIdentityCache.getIfPresent(metadata.requestId().get()) != null) {
                 newBody = icTools.getCanisterResponseForCallRequest(metadata, canisterInterfaceInfo.map(CanisterInterfaceInfo::canisterInterface), callRequestSignIdentityCache.getIfPresent(metadata.requestId().get()));
             } else {
                 newBody = icTools.decodeCanisterResponse(responseReceived.body().getBytes(), canisterInterfaceInfo);
