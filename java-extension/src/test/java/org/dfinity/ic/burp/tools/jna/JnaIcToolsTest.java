@@ -1,6 +1,10 @@
 package org.dfinity.ic.burp.tools.jna;
 
-import org.dfinity.ic.burp.tools.model.*;
+import org.dfinity.ic.burp.tools.model.IcToolsException;
+import org.dfinity.ic.burp.tools.model.Identity;
+import org.dfinity.ic.burp.tools.model.Principal;
+import org.dfinity.ic.burp.tools.model.RequestSenderInfo;
+import org.dfinity.ic.burp.tools.model.RequestType;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -58,12 +62,12 @@ class JnaIcToolsTest {
         var url = "https://ic0.app/api/v2/canister/ivcos-eqaaa-aaaab-qablq-cai/query";
         var client = HttpClient.newHttpClient();
         var info = jnaTools.decodeCanisterRequest(HexFormat.of().parseHex(queryVector), api);
-        var modifiedReq = jnaTools.encodeAndSignCanisterRequest(info.decodedRequest(), api, delegatedIdentity);
+        var modifiedReq = jnaTools.encodeAndSignCanisterRequest(info.decodedBody(), api, delegatedIdentity);
 
         var httpReq = HttpRequest
                 .newBuilder()
                 .uri(new URI(url))
-                .POST(HttpRequest.BodyPublishers.ofByteArray(modifiedReq))
+                .POST(HttpRequest.BodyPublishers.ofByteArray(modifiedReq.encodedBody()))
                 .build();
         var httpResp = client.send(httpReq, HttpResponse.BodyHandlers.ofByteArray());
         assertEquals(httpResp.statusCode(), 200);
@@ -109,12 +113,12 @@ class JnaIcToolsTest {
                     expectedPrincipal = Optional.of(Principal.fromHexBytes("10cbca47b4b0f5ee826b46310008966462a117004fb8ca9a2a4cc13502"));
                 }
 
-                var modifiedReq = jnaTools.encodeAndSignCanisterRequest(info.decodedRequest(), api, identity);
+                var modifiedReq = jnaTools.encodeAndSignCanisterRequest(info.decodedBody(), api, identity);
 
                 var httpReq = HttpRequest
                         .newBuilder()
                         .uri(new URI(url))
-                        .POST(HttpRequest.BodyPublishers.ofByteArray(modifiedReq))
+                        .POST(HttpRequest.BodyPublishers.ofByteArray(modifiedReq.encodedBody()))
                         .build();
                 var httpResp = client.send(httpReq, HttpResponse.BodyHandlers.ofByteArray());
 
@@ -153,7 +157,7 @@ class JnaIcToolsTest {
         assertEquals(res.senderInfo().delegation().get(0).expiration(), 1702887618048789834L);
         assertEquals(res.senderInfo().delegation().get(0).targets().size(), 0);
         assertEquals(res.senderInfo().delegation().get(0).signature(), "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");
-        assertEquals(res.decodedRequest(), """
+        assertEquals(res.decodedBody(), """
                 {
                   "content": {
                     "request_type": "query",
@@ -1983,7 +1987,7 @@ class JnaIcToolsTest {
             assertEquals(res.requestId().orElseThrow(), "Wca4JtAFIbaLi7CvLamBFFLsUJCIRh6EMUkaYQ7XmgM");
             assertEquals(res.senderInfo(), new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()));
             assertEquals(res.canisterMethod(), Optional.of("http_request"));
-            assertEquals(res.decodedRequest(), """
+            assertEquals(res.decodedBody(), """
                     {
                       "content": {
                         "request_type": "query",

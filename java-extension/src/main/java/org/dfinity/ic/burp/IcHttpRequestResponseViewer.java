@@ -17,21 +17,19 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import org.dfinity.ic.burp.UI.TopPanel;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
+import org.dfinity.ic.burp.model.UrlPathInfo;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
 
-import java.awt.*;
+import java.awt.Component;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 
 import static org.dfinity.ic.burp.Utils.getStacktrace;
 
 public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequestEditor, ExtensionProvidedHttpResponseEditor {
-
-    private static final Pattern IC_API_PATH_REGEX = Pattern.compile("/api/v2/canister/(?<cid>[^/]+)/(query|call|read_state)");
 
     private final Logging log;
     private final IcTools icTools;
@@ -55,11 +53,7 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
     }
 
     public static Optional<String> getCanisterId(String path) {
-        var matcher = IC_API_PATH_REGEX.matcher(path);
-        if (matcher.matches()) {
-            return Optional.ofNullable(matcher.group("cid"));
-        }
-        return Optional.empty();
+        return UrlPathInfo.tryFrom(path).map(UrlPathInfo::canisterId);
     }
 
     @Override
@@ -85,10 +79,10 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
                 if (isRequest) {
                     try {
                         var res = icTools.decodeCanisterRequest(requestResponse.request().body().getBytes(), canisterInterface);
-                        content = res.decodedRequest();
+                        content = res.decodedBody();
                     } catch (IcToolsException e) {
                         this.showErrorMessage("Could not decode request with path " + requestResponse.request().path() +
-                                "\nThis could be due to a malformed request or due to an issue with the IDL.","IC Decoding error");
+                                "\nThis could be due to a malformed request or due to an issue with the IDL.", "IC Decoding error");
                         log.logToError("Failed to decode request with path " + requestResponse.request().path(), e);
                         content = String.format("Failed to decode request with path %s: %s", requestResponse.request().path(), e.getStackTraceAsString());
                     }
@@ -109,7 +103,7 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
                         content = icTools.decodeCanisterResponse(requestResponse.response().body().getBytes(), canisterInterfaceInfo);
                     } catch (IcToolsException e) {
                         this.showErrorMessage("Could not decode response with path " + requestResponse.request().path() +
-                                "\nThis could be due to a malformed response or due to an issue with the IDL.","IC Decoding error");
+                                "\nThis could be due to a malformed response or due to an issue with the IDL.", "IC Decoding error");
                         log.logToError("Failed to decode response with path " + requestResponse.request().path(), e);
                         content = String.format("Failed to decode response with path %s: %s", requestResponse.request().path(), e.getStackTraceAsString());
                     }
@@ -127,7 +121,7 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
             if (requestResponse.request() == null || (!isRequest && !requestResponse.hasResponse()))
                 return false;
 
-            if(!isRequest && requestResponse.response().statusCode() != 200){
+            if (!isRequest && requestResponse.response().statusCode() != 200) {
                 return false;
             }
 
@@ -179,8 +173,8 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
         return requestEditor.isModified();
     }
 
-    private void showErrorMessage(String message, String title){
-        if(this.topPanel != null){
+    private void showErrorMessage(String message, String title) {
+        if (this.topPanel != null) {
             topPanel.showErrorMessage(message, title);
         }
     }

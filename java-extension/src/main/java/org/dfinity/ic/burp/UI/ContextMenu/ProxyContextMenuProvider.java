@@ -13,19 +13,21 @@ import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.model.InternetIdentities;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
-import org.dfinity.ic.burp.tools.model.RequestInfo;
+import org.dfinity.ic.burp.tools.model.RequestDecoded;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JMenuItem;
+import java.awt.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static org.dfinity.ic.burp.IcBurpExtension.*;
+import static org.dfinity.ic.burp.IcBurpExtension.IC_DECODED_HEADER_NAME;
+import static org.dfinity.ic.burp.IcBurpExtension.IC_FRONTEND_HOSTNAME_HEADER_NAME;
+import static org.dfinity.ic.burp.IcBurpExtension.IC_SIGN_IDENTITY_HEADER_NAME;
 
 
-public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
+public class ProxyContextMenuProvider implements ContextMenuItemsProvider {
     private final MontoyaApi api;
     private final IcTools icTools;
     private final AsyncLoadingCache<String, CanisterCacheInfo> canisterInterfaceCache;
@@ -51,7 +53,7 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
 
         messageEditorRequestResponse.ifPresent(messageEditorHttpRequestResponse -> totalRequestResponses.add(messageEditorHttpRequestResponse.requestResponse()));
 
-        if(totalRequestResponses.isEmpty()){
+        if (totalRequestResponses.isEmpty()) {
             // This returns an empty list of menu items.
             return ContextMenuItemsProvider.super.provideMenuItems(event);
         }
@@ -80,27 +82,27 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
 
             Optional<String> idl = canisterCacheInfo.join().getActiveCanisterInterface();
             try {
-                RequestInfo requestInfo = icTools.decodeCanisterRequest(req.body().getBytes(), idl);
-                Optional<List<String>> result = internetIdentities.findAnchor(requestInfo.senderInfo().sender(), req.headerValue("Origin"));
+                RequestDecoded request = icTools.decodeCanisterRequest(req.body().getBytes(), idl);
+                Optional<List<String>> result = internetIdentities.findAnchor(request.senderInfo().sender(), req.headerValue("Origin"));
                 req = req.withAddedHeader(IC_DECODED_HEADER_NAME, "True");
-                if(result.isPresent()) {
+                if (result.isPresent()) {
                     req = req.withAddedHeader(IC_SIGN_IDENTITY_HEADER_NAME, result.get().get(0));
                     req = req.withAddedHeader(IC_FRONTEND_HOSTNAME_HEADER_NAME, result.get().get(1));
                 }
-                httpRequestList.add(req.withBody(requestInfo.decodedRequest()));
+                httpRequestList.add(req.withBody(request.decodedBody()));
 
             } catch (IcToolsException e) {
                 api.logging().logToError("Unable to request metadata for request with URI: " + req.url(), e);
             }
         }
 
-        if(httpRequestList.isEmpty())
+        if (httpRequestList.isEmpty())
             // This returns an empty list of menu items.
             return ContextMenuItemsProvider.super.provideMenuItems(event);
 
         JMenuItem menuItemRepeater = new JMenuItem("Send to repeater (IC Decoded)");
         menuItemRepeater.addActionListener(l -> {
-            for(HttpRequest r : httpRequestList){
+            for (HttpRequest r : httpRequestList) {
                 // This header is added to easily detect which outgoing requests need to be re-encoded and resigned.
                 api.repeater().sendToRepeater(r);
             }
@@ -108,7 +110,7 @@ public class ProxyContextMenuProvider implements  ContextMenuItemsProvider{
 
         JMenuItem menuItemIntruder = new JMenuItem("Send to intruder (IC Decoded)");
         menuItemIntruder.addActionListener(l -> {
-            for(HttpRequest r : httpRequestList){
+            for (HttpRequest r : httpRequestList) {
                 // This header is added to easily detect which outgoing requests need to be re-encoded and resigned.
                 api.intruder().sendToIntruder(r);
             }

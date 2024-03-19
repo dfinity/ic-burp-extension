@@ -2,10 +2,10 @@ package org.dfinity.ic.burp.controller;
 
 import burp.api.montoya.logging.Logging;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
-import org.dfinity.ic.burp.DataPersister;
 import org.dfinity.ic.burp.UI.TopPanel;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.model.JWKIdentity;
+import org.dfinity.ic.burp.storage.DataPersister;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
@@ -41,9 +41,9 @@ public class IdlController {
 
     public List<String> refreshAllInterfaceCacheEntries() {
         List<String> result = new ArrayList<>();
-        for(Map.Entry<String, CanisterCacheInfo> entry : canisterInterfaceCache.synchronous().asMap().entrySet()){
+        for (Map.Entry<String, CanisterCacheInfo> entry : canisterInterfaceCache.synchronous().asMap().entrySet()) {
             String cid = entry.getKey();
-            if(!this.refreshInterfaceCacheEntries(cid))
+            if (!this.refreshInterfaceCacheEntries(cid))
                 result.add(cid);
         }
         return result;
@@ -53,10 +53,10 @@ public class IdlController {
         try {
             Optional<String> idlOpt = icTools.discoverCanisterInterface(cid);
             CanisterCacheInfo info = canisterInterfaceCache.get(cid).join();
-            if(info == null) {
+            if (info == null) {
                 return false;
             }
-            if(idlOpt.isEmpty())
+            if (idlOpt.isEmpty())
                 return false;
 
             info.putCanisterInterface(idlOpt.get(), InterfaceType.AUTOMATIC);
@@ -67,9 +67,9 @@ public class IdlController {
         return true;
     }
 
-    public void updateSelectedIDL(String idl){
+    public void updateSelectedIDL(String idl) {
         log.logToOutput("Updating IDL for CID: " + selectedCID + " and type: " + selectedType);
-        if(selectedCID.isEmpty() || selectedType.isEmpty()){
+        if (selectedCID.isEmpty() || selectedType.isEmpty()) {
             return;
         }
         CanisterCacheInfo info = canisterInterfaceCache.get(selectedCID.get()).join();
@@ -90,13 +90,13 @@ public class IdlController {
         topPanel.reloadIDLTable();
     }
 
-    public void setSelectedType(Optional<InterfaceType> type){
+    public void setSelectedType(Optional<InterfaceType> type) {
         this.selectedType = type;
         reloadIDLContent();
     }
 
-    public void reloadIDLContent(){
-        if(selectedCID.isEmpty() || selectedType.isEmpty()){
+    public void reloadIDLContent() {
+        if (selectedCID.isEmpty() || selectedType.isEmpty()) {
             this.topPanel.setIDLContent("Select a canister and interface type.");
             return;
         }
@@ -117,13 +117,13 @@ public class IdlController {
 
     public void addCanister() {
         String cid = this.topPanel.getUserInput("New canister ID: ", "aaaaa-aaaaa-aaaaa-aaaaa-aaa");
-        if(cid != null && !cid.isBlank() && !cid.matches("\\w{5}-\\w{5}-\\w{5}-\\w{5}-\\w{3}")){
+        if (cid != null && !cid.isBlank() && !cid.matches("\\w{5}-\\w{5}-\\w{5}-\\w{5}-\\w{3}")) {
             this.topPanel.showErrorMessage("Wrong format! \n\nA canister ID looks as follows:\naaaaa-aaaaa-aaaaa-aaaaa-aaa",
                     "Format error");
             return;
         }
-        if(this.canisterInterfaceCache.getIfPresent(cid) != null){
-            this.topPanel.showInfoMessage( "Canister already exists", "Canister already exists");
+        if (this.canisterInterfaceCache.getIfPresent(cid) != null) {
+            this.topPanel.showInfoMessage("Canister already exists", "Canister already exists");
             return;
         }
         this.canisterInterfaceCache.get(cid);
