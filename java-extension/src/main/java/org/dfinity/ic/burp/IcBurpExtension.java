@@ -12,6 +12,7 @@ import org.dfinity.ic.burp.controller.IdlController;
 import org.dfinity.ic.burp.controller.IiController;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.model.InternetIdentities;
+import org.dfinity.ic.burp.storage.DataPersister;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.jna.JnaIcTools;
 import org.dfinity.ic.burp.tools.model.RequestMetadata;
@@ -33,7 +34,7 @@ public class IcBurpExtension implements BurpExtension {
 
         IcTools icTools = new JnaIcTools();
         CacheLoaderSubscriber l = new CacheLoaderSubscriber();
-        DataPersister dataPersister = new DataPersister(api.logging(), icTools, api.persistence().extensionData(), l);
+        DataPersister dataPersister = new DataPersister(api.logging(), icTools, api.persistence().extensionData(), api.persistence().preferences(), l);
         canisterInterfaceCache = dataPersister.getCanisterInterfaceCache();
         this.internetIdentities = dataPersister.getInternetIdentities();
 
