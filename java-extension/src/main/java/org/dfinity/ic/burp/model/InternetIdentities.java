@@ -2,27 +2,36 @@ package org.dfinity.ic.burp.model;
 
 import burp.api.montoya.logging.Logging;
 import org.dfinity.ic.burp.tools.IcTools;
+import org.dfinity.ic.burp.tools.jna.model.JnaIdentityInfo;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.Identity;
 import org.dfinity.ic.burp.tools.model.Principal;
 
 import javax.swing.table.AbstractTableModel;
-import java.util.*;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 
 public class InternetIdentities extends AbstractTableModel {
 
     private final IcTools tools;
     private final Logging log;
-    // Maps anchor (Integer) onto pem files (String)
-    HashMap<String, InternetIdentity> identities = new HashMap<>();
-
-    private Optional<String> selectedII;
-
     // Maps principals discovered in get_delegation messages to anchor and frontendHostname. To avoid a dependency on JavaFx we use
     // a list instead of Pair. The first element in the list is the anchor and the second is the frontendHostname.
-    private Map<Principal, List<String>> principalToAnchorMap;
-    public InternetIdentities(Logging log, IcTools tools){
+    private final Map<Principal, List<String>> principalToAnchorMap;
+
+    // Maps anchor (Integer) onto pem files (String)
+    HashMap<String, InternetIdentity> identities = new HashMap<>();
+    private Optional<String> selectedII;
+
+    public InternetIdentities(Logging log, IcTools tools) {
         this.log = log;
         this.tools = tools;
         this.selectedII = Optional.empty();
@@ -34,23 +43,24 @@ public class InternetIdentities extends AbstractTableModel {
     }
 
     public Optional<InternetIdentity> addIdentity(String anchor) throws IcToolsException {
-        if(anchor == null) return Optional.empty();
+        if (anchor == null) return Optional.empty();
         anchor = anchor.toLowerCase();
 
-        if(identities.containsKey(anchor))
+        if (identities.containsKey(anchor))
             return Optional.empty();
         InternetIdentity ii = new InternetIdentity(anchor, tools, log);
         identities.put(anchor, ii);
         int rowAdded = identities.keySet().stream().sorted().toList().indexOf(anchor);
-        this.fireTableRowsInserted(rowAdded,rowAdded);
+        this.fireTableRowsInserted(rowAdded, rowAdded);
         return Optional.of(ii);
     }
 
     /**
      * Used to create an existing II from storage.
-     * @param anchor The anchor used for this II.
-     * @param passKeyPem The private key of the passKey authorized for this II.
-     * @param creationDate When the II was initially added to BurpSuite.
+     *
+     * @param anchor         The anchor used for this II.
+     * @param passKeyPem     The private key of the passKey authorized for this II.
+     * @param creationDate   When the II was initially added to BurpSuite.
      * @param activationDate When the II was activated the last time by authorizing the passkey.
      */
     public void addIdentity(String anchor, String passKeyPem, IiState state, Date creationDate, Date activationDate) throws IcToolsException {
@@ -61,7 +71,7 @@ public class InternetIdentities extends AbstractTableModel {
 
     public boolean checkActivations() {
         boolean r = true;
-        for(Map.Entry<String, InternetIdentity> entry : identities.entrySet()) {
+        for (Map.Entry<String, InternetIdentity> entry : identities.entrySet()) {
             InternetIdentity id = entry.getValue();
             try {
                 id.checkActivation();
@@ -75,39 +85,39 @@ public class InternetIdentities extends AbstractTableModel {
 
     /**
      * This method tries to find the anchor that corresponds to the sender principal.
-     * @param sender The requestSenderInfo from the request being sent.
+     *
+     * @param sender           The requestSenderInfo from the request being sent.
      * @param frontendHostname The frontendHostname header which is the default hostname used to generate a session key. Some dApps use an
-     *               alternative frontendHostname. In that case, we should have seen a get_delegation message containing that frontendHostname
-     *               and the anchor. This information is stored in `principalToAnchorMap`.
-     * @return  Returns a list with two elements. The first is the anchor. The second is the frontendHostname/hostname to be used
+     *                         alternative frontendHostname. In that case, we should have seen a get_delegation message containing that frontendHostname
+     *                         and the anchor. This information is stored in `principalToAnchorMap`.
+     * @return Returns a list with two elements. The first is the anchor. The second is the frontendHostname/hostname to be used
      * to obtain a session key for the same principal as found in the requestSenderInfo.
      */
     public Optional<List<String>> findAnchor(Principal sender, String frontendHostname) {
-        if(sender.equals(Principal.anonymous())){
+        if (sender.equals(Principal.anonymous())) {
             return Optional.of(new ArrayList<>(Arrays.asList("anonymous", frontendHostname)));
         }
 
-        if(frontendHostname == null) return Optional.empty();
-        if(principalToAnchorMap.get(sender) != null){
+        if (frontendHostname == null) return Optional.empty();
+        if (principalToAnchorMap.get(sender) != null) {
             return Optional.of(principalToAnchorMap.get(sender));
         }
 
-        for(Map.Entry<String, InternetIdentity> entry : identities.entrySet()){
+        for (Map.Entry<String, InternetIdentity> entry : identities.entrySet()) {
             InternetIdentity ii = entry.getValue();
 
-            if(!ii.getState().equals(IiState.Active)){
+            if (!ii.getState().equals(IiState.Active)) {
                 continue;
             }
             try {
                 Principal p = this.tools.internetIdentityGetPrincipal(entry.getKey(), ii.getPasskey(), frontendHostname);
-                if (p.equals(sender)){
+                if (p.equals(sender)) {
                     return Optional.of(new ArrayList<>(Arrays.asList(ii.getAnchor(), frontendHostname)));
                 }
-            }
-            catch (IcToolsException e) {
+            } catch (IcToolsException e) {
                 // SignIdentity might not be registered as passkey for this II.
                 this.log.logToError("An exception occurred trying to find the principal for the  anchor" + entry.getKey()
-                + "\n" + e.getStackTraceAsString());
+                        + "\n" + e.getStackTraceAsString());
             }
         }
         return Optional.empty();
@@ -117,24 +127,25 @@ public class InternetIdentities extends AbstractTableModel {
     /**
      * Obtain the Identity which can be used to sign the outgoing request which maintain the same InternetIdentity and thus
      * the same principal.
-     * @param anchor    The anchor for which to get the
-     * @param frontendHostname    The hostname to use to derive the s
-     * @return          The identity including a delegation for the session key for the II linked to the anchor for the given frontendHostname. This Identity can be used to re-sign outgoing requests.
+     *
+     * @param anchor           The anchor for which to get the
+     * @param frontendHostname The hostname to use to derive the s
+     * @return The identity including a delegation for the session key for the II linked to the anchor for the given frontendHostname. This Identity can be used to re-sign outgoing requests.
      * @throws IcToolsException If an error occurs during delegation issuing, e.g., the signIdentity is not registered as passkey for the given anchor
      */
     public Optional<Identity> findSignIdentity(String anchor, String frontendHostname) throws IcToolsException {
         anchor = anchor.toLowerCase();
-        if(anchor.equals("anonymous")){
+        if (anchor.equals("anonymous")) {
             return Optional.of(Identity.anonymousIdentity());
         }
         Optional<InternetIdentity> ii = this.getIdentity(anchor);
-        if(ii.isEmpty()) return Optional.empty();
+        if (ii.isEmpty()) return Optional.empty();
         return ii.get().getSignIdentity(frontendHostname);
     }
 
     public void updatePrincipalToAnchorMap(String anchor, String frontendHostname) {
         Optional<InternetIdentity> ii = this.getIdentity(anchor);
-        if(ii.isPresent()) {
+        if (ii.isPresent()) {
             try {
                 Principal p = this.tools.internetIdentityGetPrincipal(anchor, ii.get().getPasskey(), frontendHostname);
                 List<String> val = new ArrayList<>();
@@ -166,21 +177,37 @@ public class InternetIdentities extends AbstractTableModel {
     }
 
     public boolean removeSelected() {
-        if(this.selectedII.isEmpty()) return false;
-        return this.remove(this.selectedII.get());
+        return this.selectedII.filter(this::remove).isPresent();
     }
 
     public boolean remove(String anchor) {
         return this.identities.remove(anchor) != null;
     }
 
-    public void setSelectedIiAnchor(Optional<String> anchor){
+    public void setSelectedIiAnchor(Optional<String> anchor) {
         this.selectedII = anchor;
     }
 
-    public InternetIdentity getSelectedII(){
-        if(this.selectedII.isEmpty()) return null;
-        return this.identities.get(this.selectedII.get());
+    public InternetIdentity getSelectedII() {
+        return this.selectedII.map(s -> this.identities.get(s)).orElse(null);
+    }
+
+    public String getDelegation(String frontendHostname) {
+        if (selectedII.isEmpty() || frontendHostname.isBlank() || !identities.containsKey(selectedII.get()))
+            return null;
+        InternetIdentity ii = identities.get(selectedII.get());
+        Optional<Identity> optId = ii.getSignIdentity(frontendHostname);
+        if (optId.isEmpty() || optId.get().delegationTarget().isEmpty())
+            return null;
+        Identity id = optId.get();
+        if (id.delegationFromPubKey().isEmpty() || id.delegationChain().isEmpty() || id.delegationTarget().isEmpty() || id.delegationTarget().get().pem.isEmpty())
+            return null;
+
+        JnaIdentityInfo identityInfo = JnaIdentityInfo.from(id);
+        if (identityInfo.pem == null || identityInfo.delegation_chain == null || identityInfo.delegation_from_pubkey == null)
+            return null;
+
+        return Base64.getEncoder().withoutPadding().encodeToString((identityInfo.identity_type + "|" + identityInfo.pem + "|" + identityInfo.delegation_from_pubkey + "|" + identityInfo.delegation_chain).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -218,18 +245,13 @@ public class InternetIdentities extends AbstractTableModel {
     }
 
     @Override
-    public boolean isCellEditable(int rowIndex, int columnIndex) {
-        return false;
-    }
-
-    @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-        if(rowIndex > this.identities.size()){
+        if (rowIndex > this.identities.size()) {
             return "Error fetching identity.";
         }
         String anchor = this.identities.keySet().stream().sorted().toList().get(rowIndex);
         InternetIdentity ii = this.identities.get(anchor);
-        if(ii == null){
+        if (ii == null) {
             this.log.logToError("Could not retrieve II in getValueAt.");
             return "";
         }
