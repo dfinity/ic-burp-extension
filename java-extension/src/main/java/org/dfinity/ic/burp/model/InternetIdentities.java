@@ -8,8 +8,10 @@ import org.dfinity.ic.burp.tools.model.Identity;
 import org.dfinity.ic.burp.tools.model.Principal;
 
 import javax.swing.table.AbstractTableModel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -21,14 +23,13 @@ public class InternetIdentities extends AbstractTableModel {
 
     private final IcTools tools;
     private final Logging log;
-    // Maps anchor (Integer) onto pem files (String)
-    HashMap<String, InternetIdentity> identities = new HashMap<>();
-
-    private Optional<String> selectedII;
-
     // Maps principals discovered in get_delegation messages to anchor and frontendHostname. To avoid a dependency on JavaFx we use
     // a list instead of Pair. The first element in the list is the anchor and the second is the frontendHostname.
-    private Map<Principal, List<String>> principalToAnchorMap;
+    private final Map<Principal, List<String>> principalToAnchorMap;
+
+    // Maps anchor (Integer) onto pem files (String)
+    HashMap<String, InternetIdentity> identities = new HashMap<>();
+    private Optional<String> selectedII;
 
     public InternetIdentities(Logging log, IcTools tools) {
         this.log = log;
@@ -176,8 +177,7 @@ public class InternetIdentities extends AbstractTableModel {
     }
 
     public boolean removeSelected() {
-        if (this.selectedII.isEmpty()) return false;
-        return this.remove(this.selectedII.get());
+        return this.selectedII.filter(this::remove).isPresent();
     }
 
     public boolean remove(String anchor) {
@@ -189,8 +189,7 @@ public class InternetIdentities extends AbstractTableModel {
     }
 
     public InternetIdentity getSelectedII() {
-        if (this.selectedII.isEmpty()) return null;
-        return this.identities.get(this.selectedII.get());
+        return this.selectedII.map(s -> this.identities.get(s)).orElse(null);
     }
 
     public String getDelegation(String frontendHostname) {
@@ -208,7 +207,7 @@ public class InternetIdentities extends AbstractTableModel {
         if (identityInfo.pem == null || identityInfo.delegation_chain == null || identityInfo.delegation_from_pubkey == null)
             return null;
 
-        return identityInfo.identity_type + "|" + identityInfo.pem + "|" + identityInfo.delegation_from_pubkey + "|" + identityInfo.delegation_chain;
+        return Base64.getEncoder().withoutPadding().encodeToString((identityInfo.identity_type + "|" + identityInfo.pem + "|" + identityInfo.delegation_from_pubkey + "|" + identityInfo.delegation_chain).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -243,11 +242,6 @@ public class InternetIdentities extends AbstractTableModel {
             case 4 -> Date.class;
             default -> String.class;
         };
-    }
-
-    @Override
-    public boolean isCellEditable(int rowIndex, int columnIndex) {
-        return false;
     }
 
     @Override
