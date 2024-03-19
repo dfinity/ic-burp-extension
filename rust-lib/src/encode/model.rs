@@ -241,6 +241,7 @@ pub enum RequestMetadata {
     Call {
         request_id: Vec<u8>,
         sender_info: RequestSenderInfo,
+        canister_id: Principal,
         canister_method: String,
     },
     ReadState {
@@ -250,29 +251,72 @@ pub enum RequestMetadata {
     Query {
         request_id: Vec<u8>,
         sender_info: RequestSenderInfo,
+        canister_id: Principal,
         canister_method: String,
     },
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum RequestInfo {
+pub enum Request<T> {
     Call {
         request_id: Vec<u8>,
         sender_info: RequestSenderInfo,
-        decoded_request: String,
+        canister_id: Principal,
         canister_method: String,
+        request_body: T,
     },
     ReadState {
         request_id: Option<Vec<u8>>,
         sender_info: RequestSenderInfo,
-        decoded_request: String,
+        request_body: T,
     },
     Query {
         request_id: Vec<u8>,
         sender_info: RequestSenderInfo,
-        decoded_request: String,
+        canister_id: Principal,
         canister_method: String,
+        request_body: T,
     },
+}
+
+impl<T> Request<T> {
+    pub fn from_metadata(metadata: RequestMetadata, body: T) -> Request<T> {
+        match metadata {
+            RequestMetadata::Call { request_id, sender_info, canister_id, canister_method } => {
+                Request::Call {
+                    request_id,
+                    sender_info,
+                    canister_id,
+                    canister_method,
+                    request_body: body,
+                }
+            }
+            RequestMetadata::ReadState { request_id, sender_info } => {
+                Request::ReadState {
+                    request_id,
+                    sender_info,
+                    request_body: body,
+                }
+            }
+            RequestMetadata::Query { request_id, sender_info, canister_id, canister_method } => {
+                Request::Query {
+                    request_id,
+                    sender_info,
+                    canister_id,
+                    canister_method,
+                    request_body: body,
+                }
+            }
+        }
+    }
+
+    pub fn get_body(self) -> T {
+        match self {
+            Request::Call { request_body, .. } => request_body,
+            Request::ReadState { request_body, .. } => request_body,
+            Request::Query { request_body, .. } => request_body,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -281,6 +325,17 @@ pub struct RequestSenderInfo {
     pub pubkey: Option<Vec<u8>>,
     pub sig: Option<Vec<u8>>,
     pub delegation: Vec<RequestSenderDelegation>,
+}
+
+impl RequestSenderInfo {
+    pub fn anonymous() -> Self {
+        RequestSenderInfo {
+            sender: Principal::anonymous(),
+            pubkey: None,
+            sig: None,
+            delegation: vec![],
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]

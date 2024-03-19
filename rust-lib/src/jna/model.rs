@@ -6,7 +6,7 @@ use candid::Principal;
 
 use crate::canister_lookup::model::LookupResult;
 use crate::encode::EncodingResult;
-use crate::encode::model::{RequestInfo, RequestMetadata};
+use crate::encode::model::{Request, RequestMetadata};
 use crate::internet_identity::model::{DelegationInfo, InternetIdentityResult};
 use crate::jna::{delegation_to_string, str_to_ptr};
 
@@ -48,11 +48,12 @@ impl From<LookupResult<Option<String>>> for DiscoverCanisterInterfaceResult {
 pub struct GetRequestMetadataResult {
     error_message: *const c_char,
     request_type: *const c_char,
-    request_id: *const c_char,
     sender: *const c_char,
     pubkey: *const c_char,
     sig: *const c_char,
     delegation: *const c_char,
+    request_id: *const c_char,
+    canister_id: *const c_char,
     canister_method: *const c_char,
 }
 
@@ -60,29 +61,30 @@ impl From<EncodingResult<RequestMetadata>> for GetRequestMetadataResult {
     fn from(result: EncodingResult<RequestMetadata>) -> Self {
         match result {
             Ok(metadata) => {
-                let (rtype, rid, sid, cm) = match metadata {
-                    RequestMetadata::Call { request_id, sender_info, canister_method } => {
-                        ("call".to_string(), Some(request_id), sender_info, canister_method)
+                let (rtype, rid, sid, cid, cm) = match metadata {
+                    RequestMetadata::Call { request_id, sender_info, canister_id, canister_method } => {
+                        ("call".to_string(), Some(request_id), sender_info, canister_id.to_text(), canister_method)
                     }
                     RequestMetadata::ReadState { request_id, sender_info } => {
-                        ("read_state".to_string(), request_id, sender_info, "".to_string())
+                        ("read_state".to_string(), request_id, sender_info, "".to_string(), "".to_string())
                     }
-                    RequestMetadata::Query { request_id, sender_info, canister_method } => {
-                        ("query".to_string(), Some(request_id), sender_info, canister_method)
+                    RequestMetadata::Query { request_id, sender_info, canister_id, canister_method } => {
+                        ("query".to_string(), Some(request_id), sender_info, canister_id.to_text(), canister_method)
                     }
                 };
 
                 GetRequestMetadataResult {
                     error_message: null(),
                     request_type: str_to_ptr(rtype),
-                    request_id: match rid {
-                        None => null(),
-                        Some(rid) => str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&rid))
-                    },
                     sender: str_to_ptr(sid.sender.to_text()),
                     pubkey: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&sid.pubkey.unwrap_or_default())),
                     sig: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&sid.sig.unwrap_or_default())),
                     delegation: str_to_ptr(delegation_to_string(sid.delegation)),
+                    request_id: match rid {
+                        None => null(),
+                        Some(rid) => str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&rid))
+                    },
+                    canister_id: str_to_ptr(cid),
                     canister_method: str_to_ptr(cm),
                 }
             }
@@ -90,11 +92,12 @@ impl From<EncodingResult<RequestMetadata>> for GetRequestMetadataResult {
                 GetRequestMetadataResult {
                     error_message: str_to_ptr(err.to_string()),
                     request_type: null(),
-                    request_id: null(),
                     sender: null(),
                     pubkey: null(),
                     sig: null(),
                     delegation: null(),
+                    request_id: null(),
+                    canister_id: null(),
                     canister_method: null(),
                 }
             }
@@ -106,13 +109,14 @@ impl From<EncodingResult<RequestMetadata>> for GetRequestMetadataResult {
 pub struct DecodeCanisterRequestResult {
     error_message: *const c_char,
     request_type: *const c_char,
-    request_id: *const c_char,
     sender: *const c_char,
     pubkey: *const c_char,
     sig: *const c_char,
     delegation: *const c_char,
-    decoded_request: *const c_char,
+    request_id: *const c_char,
+    canister_id: *const c_char,
     canister_method: *const c_char,
+    decoded_body: *const c_char,
 }
 
 impl DecodeCanisterRequestResult {
@@ -120,60 +124,52 @@ impl DecodeCanisterRequestResult {
         DecodeCanisterRequestResult {
             error_message: str_to_ptr(err),
             request_type: null(),
-            request_id: null(),
             sender: null(),
             pubkey: null(),
             sig: null(),
             delegation: null(),
-            decoded_request: null(),
+            request_id: null(),
+            canister_id: null(),
             canister_method: null(),
+            decoded_body: null(),
         }
     }
 }
 
-impl From<EncodingResult<RequestInfo>> for DecodeCanisterRequestResult {
-    fn from(result: EncodingResult<RequestInfo>) -> Self {
+impl From<EncodingResult<Request<String>>> for DecodeCanisterRequestResult {
+    fn from(result: EncodingResult<Request<String>>) -> Self {
         match result {
             Ok(info) => {
-                let (rtype, rid, sid, dreq, cm) = match info {
-                    RequestInfo::Call { request_id, decoded_request, sender_info, canister_method } => {
-                        ("call".to_string(), Some(request_id), sender_info, decoded_request, canister_method)
+                let (rtype, rid, sid, dreq, cid, cm) = match info {
+                    Request::Call { request_id, request_body: decoded_request, sender_info, canister_id, canister_method } => {
+                        ("call".to_string(), Some(request_id), sender_info, decoded_request, canister_id.to_text(), canister_method)
                     }
-                    RequestInfo::ReadState { request_id, sender_info, decoded_request } => {
-                        ("read_state".to_string(), request_id, sender_info, decoded_request, "".to_string())
+                    Request::ReadState { request_id, sender_info, request_body: decoded_request } => {
+                        ("read_state".to_string(), request_id, sender_info, decoded_request, "".to_string(), "".to_string())
                     }
-                    RequestInfo::Query { request_id, sender_info, decoded_request, canister_method } => {
-                        ("query".to_string(), Some(request_id), sender_info, decoded_request, canister_method)
+                    Request::Query { request_id, sender_info, request_body: decoded_request, canister_id, canister_method } => {
+                        ("query".to_string(), Some(request_id), sender_info, decoded_request, canister_id.to_text(), canister_method)
                     }
                 };
 
                 DecodeCanisterRequestResult {
                     error_message: null(),
                     request_type: str_to_ptr(rtype),
-                    request_id: match rid {
-                        None => null(),
-                        Some(rid) => str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&rid))
-                    },
                     sender: str_to_ptr(sid.sender.to_text()),
                     pubkey: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&sid.pubkey.unwrap_or_default())),
                     sig: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&sid.sig.unwrap_or_default())),
                     delegation: str_to_ptr(delegation_to_string(sid.delegation)),
-                    decoded_request: str_to_ptr(dreq),
+                    request_id: match rid {
+                        None => null(),
+                        Some(rid) => str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&rid))
+                    },
+                    canister_id: str_to_ptr(cid),
                     canister_method: str_to_ptr(cm),
+                    decoded_body: str_to_ptr(dreq),
                 }
             }
             Err(err) => {
-                DecodeCanisterRequestResult {
-                    error_message: str_to_ptr(err.to_string()),
-                    request_type: null(),
-                    request_id: null(),
-                    sender: null(),
-                    pubkey: null(),
-                    sig: null(),
-                    delegation: null(),
-                    decoded_request: null(),
-                    canister_method: null(),
-                }
+                DecodeCanisterRequestResult::error(err.to_string())
             }
         }
     }
@@ -238,33 +234,66 @@ impl GenerateEd25519KeyResult {
 #[repr(C)]
 pub struct EncodeAndSignCanisterRequestResult {
     error_message: *const c_char,
-    encoded_request: *const c_char,
+    request_type: *const c_char,
+    sender: *const c_char,
+    pubkey: *const c_char,
+    sig: *const c_char,
+    delegation: *const c_char,
+    request_id: *const c_char,
+    canister_id: *const c_char,
+    canister_method: *const c_char,
+    encoded_body: *const c_char,
 }
 
 impl EncodeAndSignCanisterRequestResult {
     pub fn error(err: String) -> Self {
         EncodeAndSignCanisterRequestResult {
             error_message: str_to_ptr(err),
-            encoded_request: null(),
+            request_type: null(),
+            sender: null(),
+            pubkey: null(),
+            sig: null(),
+            delegation: null(),
+            request_id: null(),
+            canister_id: null(),
+            canister_method: null(),
+            encoded_body: null(),
         }
     }
 }
 
-impl From<EncodingResult<Vec<u8>>> for EncodeAndSignCanisterRequestResult {
-    fn from(result: EncodingResult<Vec<u8>>) -> Self {
+impl From<EncodingResult<Request<Vec<u8>>>> for EncodeAndSignCanisterRequestResult {
+    fn from(result: EncodingResult<Request<Vec<u8>>>) -> Self {
         match result {
-            Ok(encoded_request) => {
+            Ok(request) => {
+                let (rtype, rid, sid, req, cid, cm) = match request {
+                    Request::Call { request_id, request_body: decoded_request, sender_info, canister_id, canister_method } => {
+                        ("call".to_string(), Some(request_id), sender_info, decoded_request, canister_id.to_text(), canister_method)
+                    }
+                    Request::ReadState { request_id, sender_info, request_body: decoded_request } => {
+                        ("read_state".to_string(), request_id, sender_info, decoded_request, "".to_string(), "".to_string())
+                    }
+                    Request::Query { request_id, sender_info, request_body: decoded_request, canister_id, canister_method } => {
+                        ("query".to_string(), Some(request_id), sender_info, decoded_request, canister_id.to_text(), canister_method)
+                    }
+                };
                 EncodeAndSignCanisterRequestResult {
                     error_message: null(),
-                    encoded_request: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&encoded_request)),
+                    request_type: str_to_ptr(rtype),
+                    sender: str_to_ptr(sid.sender.to_text()),
+                    pubkey: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&sid.pubkey.unwrap_or_default())),
+                    sig: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&sid.sig.unwrap_or_default())),
+                    delegation: str_to_ptr(delegation_to_string(sid.delegation)),
+                    request_id: match rid {
+                        None => null(),
+                        Some(rid) => str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&rid))
+                    },
+                    canister_id: str_to_ptr(cid),
+                    canister_method: str_to_ptr(cm),
+                    encoded_body: str_to_ptr(base64::engine::general_purpose::STANDARD_NO_PAD.encode(&req)),
                 }
             }
-            Err(err) => {
-                EncodeAndSignCanisterRequestResult {
-                    error_message: str_to_ptr(err.to_string()),
-                    encoded_request: null(),
-                }
-            }
+            Err(err) => EncodeAndSignCanisterRequestResult::error(err.to_string())
         }
     }
 }
