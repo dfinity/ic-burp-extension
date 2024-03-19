@@ -1,7 +1,11 @@
 package org.dfinity.ic.burp;
 
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.ui.editor.extension.*;
+import burp.api.montoya.ui.editor.extension.EditorCreationContext;
+import burp.api.montoya.ui.editor.extension.ExtensionProvidedHttpRequestEditor;
+import burp.api.montoya.ui.editor.extension.ExtensionProvidedHttpResponseEditor;
+import burp.api.montoya.ui.editor.extension.HttpRequestEditorProvider;
+import burp.api.montoya.ui.editor.extension.HttpResponseEditorProvider;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Cache;
 import org.dfinity.ic.burp.UI.TopPanel;
@@ -34,6 +38,6 @@ public class IcHttpRequestResponseViewerProvider implements HttpRequestEditorPro
 
     @Override
     public ExtensionProvidedHttpResponseEditor provideHttpResponseEditor(EditorCreationContext creationContext) {
-        return new IcHttpRequestResponseViewer(api, icTools, topPanel,canisterInterfaceCache, callRequestCache, false, Optional.empty());
+        return new IcHttpRequestResponseViewer(api, icTools, topPanel, canisterInterfaceCache, callRequestCache, false, Optional.empty());
     }
 }

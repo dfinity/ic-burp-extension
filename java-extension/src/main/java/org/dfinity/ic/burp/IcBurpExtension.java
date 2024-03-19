@@ -55,7 +55,7 @@ public class IcBurpExtension implements BurpExtension {
 
         // Register an HTTP handler that intercepts all requests to update the interface cache.
         api.http().registerHttpHandler(new IcCacheRefresh(api.logging(), icTools, internetIdentities, canisterInterfaceCache, callRequestCache, Optional.empty(), Optional.empty()));
-        api.http().registerHttpHandler(new IcSigning(api.logging(), icTools, tp, canisterInterfaceCache, internetIdentities));
+        api.http().registerHttpHandler(new IcSigning(api.logging(), icTools, tp, internetIdentities, canisterInterfaceCache));
 
         // Add Context Menu item to send IC requests to the repeater.
         api.userInterface().registerContextMenuItemsProvider(new ProxyContextMenuProvider(api, icTools, canisterInterfaceCache, internetIdentities));

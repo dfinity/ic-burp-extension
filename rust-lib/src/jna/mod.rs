@@ -15,7 +15,7 @@ use ring::signature::Ed25519KeyPair;
 use model::DecodeCanisterRequestResult;
 
 use crate::{canister_lookup, encode, internet_identity};
-use crate::encode::model::RequestSenderDelegation;
+use crate::encode::model::{RequestMetadata, RequestSenderDelegation, RequestSenderInfo};
 use crate::jna::model::{DecodeCanisterResponseResult, DiscoverCanisterInterfaceResult, EncodeAndSignCanisterRequestResult, GenerateEd25519KeyResult, GetRequestMetadataResult, InternetIdentityAddTentativePasskeyResult, InternetIdentityGetDelegationResult, InternetIdentityGetPrincipalResult, InternetIdentityIsPasskeyRegisteredResult};
 
 mod model;
@@ -99,6 +99,54 @@ pub extern fn encode_and_sign_canister_request(decoded_request: *const c_char, c
     match create_identity(identity_type, identity_pem_opt, identity_delegation_from_pubkey_opt, identity_delegation_chain_opt) {
         Ok(identity) => encode::encode_and_sign_canister_request(req, canister_interface, identity).into(),
         Err(e) => EncodeAndSignCanisterRequestResult::error(e),
+    }
+}
+
+#[no_mangle]
+#[tokio::main]
+pub async extern fn get_canister_response_for_call_request(request_type: *const c_char, request_id: *const c_char, canister_id: *const c_char, canister_method: *const c_char, canister_interface_opt: *const c_char, identity_type: *const c_char, identity_pem_opt: *const c_char, identity_delegation_from_pubkey_opt: *const c_char, identity_delegation_chain_opt: *const c_char) -> DecodeCanisterResponseResult {
+    let rt = match to_string(request_type) {
+        Ok(rts) => rts.to_ascii_lowercase(),
+        Err(e) => return DecodeCanisterResponseResult::error(e),
+    };
+    if !rt.eq("call") {
+        return DecodeCanisterResponseResult::error(format!("request type wrong, expected: call, actual: {rt}"));
+    }
+    let rid = match to_string(request_id) {
+        Ok(rids) => match base64::engine::general_purpose::STANDARD_NO_PAD.decode(rids) {
+            Ok(ridv) => ridv,
+            Err(e) => return DecodeCanisterResponseResult::error(e.to_string())
+        },
+        Err(e) => return DecodeCanisterResponseResult::error(e),
+    };
+    let cid = match to_string(canister_id) {
+        Ok(cids) => match Principal::from_text(cids) {
+            Ok(cidp) => cidp,
+            Err(e) => return DecodeCanisterResponseResult::error(e.to_string())
+        }
+        Err(e) => return DecodeCanisterResponseResult::error(e)
+    };
+    let cm = match to_string(canister_method) {
+        Ok(cms) => cms,
+        Err(e) => return DecodeCanisterResponseResult::error(e),
+    };
+    let metadata = RequestMetadata::Call {
+        request_id: rid,
+        sender_info: RequestSenderInfo::anonymous(),
+        canister_id: cid,
+        canister_method: cm,
+    };
+    let canister_interface = if canister_interface_opt == null() {
+        None
+    } else {
+        Some(match to_string(canister_interface_opt) {
+            Ok(s) => s,
+            Err(e) => return DecodeCanisterResponseResult::error(e),
+        })
+    };
+    match create_identity(identity_type, identity_pem_opt, identity_delegation_from_pubkey_opt, identity_delegation_chain_opt) {
+        Ok(identity) => encode::get_canister_response_for_call_request(metadata, canister_interface, identity).await.into(),
+        Err(e) => DecodeCanisterResponseResult::error(e),
     }
 }
 

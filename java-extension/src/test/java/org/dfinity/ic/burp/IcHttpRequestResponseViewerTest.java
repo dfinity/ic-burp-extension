@@ -15,7 +15,14 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.dfinity.ic.burp.model.CanisterCacheInfo;
 import org.dfinity.ic.burp.tools.IcTools;
-import org.dfinity.ic.burp.tools.model.*;
+import org.dfinity.ic.burp.tools.model.CanisterInterfaceInfo;
+import org.dfinity.ic.burp.tools.model.IcToolsException;
+import org.dfinity.ic.burp.tools.model.InterfaceType;
+import org.dfinity.ic.burp.tools.model.Principal;
+import org.dfinity.ic.burp.tools.model.Request;
+import org.dfinity.ic.burp.tools.model.RequestMetadata;
+import org.dfinity.ic.burp.tools.model.RequestSenderInfo;
+import org.dfinity.ic.burp.tools.model.RequestType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,8 +37,13 @@ import org.mockito.quality.Strictness;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -176,11 +188,11 @@ class IcHttpRequestResponseViewerTest {
     public void shouldDecodeBody(String path, boolean isRequest) throws IcToolsException {
         when(request.path()).thenReturn(path);
         if (isRequest) {
-            when(tools.decodeCanisterRequest(BODY_BYTES, Optional.of("vtrom-gqaaa-aaaaq-aabia-cai"))).thenReturn(new RequestInfo(RequestType.QUERY, Optional.of("123"), new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), "decodedBody", Optional.empty()));
+            when(tools.decodeCanisterRequest(BODY_BYTES, Optional.of("vtrom-gqaaa-aaaaq-aabia-cai"))).thenReturn(Request.decoded(RequestType.QUERY, new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), Optional.of("123"), Optional.empty(), Optional.empty(), "decodedBody"));
         } else {
             if (path.endsWith("/read_state"))
-                callRequestCache.put("requestId", new RequestMetadata(RequestType.CALL, Optional.of("requestId"), new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), Optional.of("canisterMethod")));
-            when(tools.getRequestMetadata(BODY_BYTES)).thenReturn(new RequestMetadata(RequestType.CALL, Optional.of("requestId"), new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), Optional.of("canisterMethod")));
+                callRequestCache.put("requestId", Request.metadata(RequestType.CALL, new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), Optional.of("requestId"), Optional.of("canisterId"), Optional.of("canisterMethod")));
+            when(tools.getRequestMetadata(BODY_BYTES)).thenReturn(Request.metadata(RequestType.CALL, new RequestSenderInfo(Principal.anonymous(), Optional.empty(), Optional.empty(), List.of()), Optional.of("requestId"), Optional.of("canisterId"), Optional.of("canisterMethod")));
             when(tools.decodeCanisterResponse(BODY_BYTES, Optional.of(new CanisterInterfaceInfo("vtrom-gqaaa-aaaaq-aabia-cai", "canisterMethod")))).thenReturn("decodedBody");
         }
 
