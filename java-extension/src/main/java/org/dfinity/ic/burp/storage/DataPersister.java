@@ -170,17 +170,6 @@ public class DataPersister {
         this.rootPO.setChildObject(IC_KEY, icPO);
     }
 
-    private HierarchicPreferences generatePersistenceTree() {
-        HierarchicPreferences icPref = HierarchicPreferences.from(preferences, IC_KEY).orElseGet(HierarchicPreferences::new);
-        HierarchicPreferences iiPref = icPref.getChildObject(IDENTITIES_KEY);
-        if (iiPref == null) {
-            iiPref = new HierarchicPreferences();
-            icPref.setChildObject(IDENTITIES_KEY, iiPref);
-        }
-        icPref.store(preferences, IC_KEY);
-        return icPref;
-    }
-
     public JWKIdentity getDefaultIdentity() {
         // TODO The default JWK Identity is not yet persisted. A new one is generated when loading the extension.
         // PersistedObject icObject = rootPO.getChildObject("IC");
@@ -220,8 +209,9 @@ public class DataPersister {
                                                                                       and not present if not yet activated.
         */
         log.logToOutput("Storing identities to Burp preference file.");
-        HierarchicPreferences icPref = generatePersistenceTree();
-        HierarchicPreferences identitiesPref = icPref.getChildObject(IDENTITIES_KEY);
+        HierarchicPreferences icPref = new HierarchicPreferences();
+        HierarchicPreferences identitiesPref = new HierarchicPreferences();
+        icPref.setChildObject(IDENTITIES_KEY, identitiesPref);
 
         for (Map.Entry<String, InternetIdentity> iiEntry : identities.getIdentities().entrySet()) {
             log.logToOutput("Storing identities with anchor: " + iiEntry.getKey());
