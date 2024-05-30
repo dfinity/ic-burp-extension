@@ -212,9 +212,9 @@ public class DataPersister {
        Name of the IiState enum   Pem file of the passkey    Date II was created      Date the passkey was activated
                                                                                       and not present if not yet activated.
         */
-        Map<PreferenceType, Set<String>> createdKeys;
+        Map<PreferenceType, Set<String>> storedKeys;
         if (identities.getIdentities().isEmpty()) {
-            createdKeys = Map.of();
+            storedKeys = Map.of();
         } else {
             log.logToOutput("Storing identities to Burp preference file.");
             HierarchicPreferences icPref = new HierarchicPreferences();
@@ -242,15 +242,15 @@ public class DataPersister {
                 log.logToOutput("Storing identities with HierarchicPreferences: " + iiPref);
                 identitiesPref.setChildObject(iiEntry.getKey(), iiPref);
             }
-            createdKeys = icPref.store(preferences, IC_KEY);
+            storedKeys = icPref.store(preferences, IC_KEY);
         }
 
         new PersisterUtils(preferences).deleteMatchingPreferences((type, key) -> {
             if (!key.startsWith(IC_KEY + KEY_SEPARATOR)) {
-                // we do not delete preferences outside our namespace
+                // we do not delete preferences that do not fall into our namespace
                 return false;
             }
-            return !createdKeys.getOrDefault(type, Set.of()).contains(key);
+            return !storedKeys.getOrDefault(type, Set.of()).contains(key);
         });
     }
 

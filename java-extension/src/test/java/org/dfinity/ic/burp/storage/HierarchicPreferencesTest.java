@@ -1,19 +1,69 @@
 package org.dfinity.ic.burp.storage;
 
 import burp.api.montoya.persistence.Preferences;
+import org.dfinity.ic.burp.model.PreferenceType;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.dfinity.ic.burp.storage.HierarchicPreferences.BOOLEAN_TYPE;
+import static org.dfinity.ic.burp.storage.HierarchicPreferences.BYTE_TYPE;
+import static org.dfinity.ic.burp.storage.HierarchicPreferences.CHILD_TYPE;
+import static org.dfinity.ic.burp.storage.HierarchicPreferences.INTEGER_TYPE;
+import static org.dfinity.ic.burp.storage.HierarchicPreferences.KEY_SEPARATOR;
+import static org.dfinity.ic.burp.storage.HierarchicPreferences.LONG_TYPE;
+import static org.dfinity.ic.burp.storage.HierarchicPreferences.SHORT_TYPE;
+import static org.dfinity.ic.burp.storage.HierarchicPreferences.STRING_TYPE;
+import static org.dfinity.ic.burp.storage.HierarchicPreferences.TYPE_VALUE_SEPARATOR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class HierarchicPreferencesTest {
 
     private final Preferences preferences = new TestPreferences();
+
+    private Set<String> valueSet(List<String> path, PreferenceType type, List<String> values) {
+        String prefix = pathToPrefix(path);
+        String typeStr = typeToString(type);
+        Set<String> res = new HashSet<>();
+        for (var v : values) {
+            res.add(String.format("%s%s%s%s%s", prefix, KEY_SEPARATOR, typeStr, TYPE_VALUE_SEPARATOR, v));
+        }
+        return res;
+    }
+
+    private String pathToPrefix(List<String> path) {
+        StringBuilder res = new StringBuilder(path.get(0));
+        for (int i = 1; i < path.size(); i++) {
+            res.append(KEY_SEPARATOR).append(CHILD_TYPE).append(TYPE_VALUE_SEPARATOR).append(path.get(i));
+        }
+        return res.toString();
+    }
+
+    private String typeToString(PreferenceType type) {
+        return switch (type) {
+            case BOOLEAN -> BOOLEAN_TYPE;
+            case BYTE -> BYTE_TYPE;
+            case INTEGER -> INTEGER_TYPE;
+            case LONG -> LONG_TYPE;
+            case SHORT -> SHORT_TYPE;
+            case STRING -> STRING_TYPE;
+        };
+    }
+
+    private Set<String> typeSet(List<String> path, List<PreferenceType> types) {
+        Set<String> res = new HashSet<>();
+        for (var t : types) {
+            res.add(String.format("%s%s%s", pathToPrefix(path), KEY_SEPARATOR, typeToString(t)));
+        }
+        return res;
+    }
 
     @Test
     public void shouldStoreAndLoadFlatPreferences() {
@@ -30,7 +80,17 @@ class HierarchicPreferencesTest {
         in.setString("stringB", "bar");
         in.setString("stringC", "baz");
 
-        in.store(preferences, "PREF");
+        var storedKeys = in.store(preferences, "PREF");
+
+        assertEquals(valueSet(List.of("PREF"), PreferenceType.BOOLEAN, List.of("boolA", "boolB")), storedKeys.get(PreferenceType.BOOLEAN));
+        assertEquals(valueSet(List.of("PREF"), PreferenceType.BYTE, List.of("byteA")), storedKeys.get(PreferenceType.BYTE));
+        assertEquals(valueSet(List.of("PREF"), PreferenceType.INTEGER, List.of("integerA", "integerB", "integerC")), storedKeys.get(PreferenceType.INTEGER));
+        assertEquals(valueSet(List.of("PREF"), PreferenceType.SHORT, List.of("shortA")), storedKeys.get(PreferenceType.SHORT));
+        assertEquals(valueSet(List.of("PREF"), PreferenceType.LONG, List.of("longA")), storedKeys.get(PreferenceType.LONG));
+        var stringKeys = valueSet(List.of("PREF"), PreferenceType.STRING, List.of("stringA", "stringB", "stringC"));
+        stringKeys.addAll(typeSet(List.of("PREF"), Arrays.asList(PreferenceType.values())));
+
+        assertEquals(stringKeys, storedKeys.get(PreferenceType.STRING));
 
         var out = HierarchicPreferences.from(preferences, "PREF").orElseThrow();
 
@@ -54,7 +114,17 @@ class HierarchicPreferencesTest {
         nested.setString("stringC", "baz");
         in.setChildObject("nested", nested);
 
-        in.store(preferences, "pref");
+        var storedKeys = in.store(preferences, "pref");
+
+        assertEquals(valueSet(List.of("pref", "nested"), PreferenceType.BOOLEAN, List.of("boolA", "boolB")), storedKeys.get(PreferenceType.BOOLEAN));
+        assertEquals(valueSet(List.of("pref", "nested"), PreferenceType.BYTE, List.of("byteA")), storedKeys.get(PreferenceType.BYTE));
+        assertEquals(valueSet(List.of("pref", "nested"), PreferenceType.INTEGER, List.of("integerA", "integerB", "integerC")), storedKeys.get(PreferenceType.INTEGER));
+        assertEquals(valueSet(List.of("pref", "nested"), PreferenceType.SHORT, List.of("shortA")), storedKeys.get(PreferenceType.SHORT));
+        assertEquals(valueSet(List.of("pref", "nested"), PreferenceType.LONG, List.of("longA")), storedKeys.get(PreferenceType.LONG));
+        var stringKeys = valueSet(List.of("pref", "nested"), PreferenceType.STRING, List.of("stringA", "stringB", "stringC"));
+        stringKeys.addAll(typeSet(List.of("pref", "nested"), Arrays.asList(PreferenceType.values())));
+        stringKeys.add("pref" + KEY_SEPARATOR + "Child");
+        assertEquals(stringKeys, storedKeys.get(PreferenceType.STRING));
 
         var out = HierarchicPreferences.from(preferences, "pref").orElseThrow();
 

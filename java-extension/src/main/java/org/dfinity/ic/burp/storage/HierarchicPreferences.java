@@ -15,15 +15,15 @@ import java.util.stream.Collectors;
 
 public class HierarchicPreferences implements Preferences {
     public static final String KEY_SEPARATOR = "#";
-    private static final String TYPE_VALUE_SEPARATOR = "$";
-    private static final String RESERVED_CHARS = KEY_SEPARATOR + TYPE_VALUE_SEPARATOR;
-    private static final String BOOLEAN_TYPE = "Boolean";
-    private static final String BYTE_TYPE = "Byte";
-    private static final String INTEGER_TYPE = "Integer";
-    private static final String LONG_TYPE = "Long";
-    private static final String SHORT_TYPE = "Short";
-    private static final String STRING_TYPE = "String";
-    private static final String CHILD_TYPE = "Child";
+    public static final String TYPE_VALUE_SEPARATOR = "$";
+    public static final String RESERVED_CHARS = KEY_SEPARATOR + TYPE_VALUE_SEPARATOR;
+    public static final String BOOLEAN_TYPE = "Boolean";
+    public static final String BYTE_TYPE = "Byte";
+    public static final String INTEGER_TYPE = "Integer";
+    public static final String LONG_TYPE = "Long";
+    public static final String SHORT_TYPE = "Short";
+    public static final String STRING_TYPE = "String";
+    public static final String CHILD_TYPE = "Child";
     private final Map<String, Integer> integers = new HashMap<>();
     private final Map<String, Boolean> booleans = new HashMap<>();
     private final Map<String, Byte> bytes = new HashMap<>();
@@ -244,7 +244,7 @@ public class HierarchicPreferences implements Preferences {
 
         WrappedKeyTrackingPreferences wrappedPref = new WrappedKeyTrackingPreferences(preferences);
         storeInternal(wrappedPref, key);
-        return wrappedPref.getKeyInfo();
+        return wrappedPref.getKeysByType();
     }
 
     private void loadInternal(Preferences preferences, String prefix) {
@@ -289,17 +289,17 @@ public class HierarchicPreferences implements Preferences {
 
     private static class WrappedKeyTrackingPreferences implements Preferences {
         private final Preferences preferences;
-        private final Map<PreferenceType, Set<String>> keyInfo = new HashMap<>();
+        private final Map<PreferenceType, Set<String>> keysByType = new HashMap<>();
 
         public WrappedKeyTrackingPreferences(Preferences preferences) {
             this.preferences = preferences;
             for (var type : PreferenceType.values()) {
-                keyInfo.put(type, new HashSet<>());
+                keysByType.put(type, new HashSet<>());
             }
         }
 
-        public Map<PreferenceType, Set<String>> getKeyInfo() {
-            return keyInfo;
+        public Map<PreferenceType, Set<String>> getKeysByType() {
+            return keysByType;
         }
 
         @Override
@@ -309,13 +309,13 @@ public class HierarchicPreferences implements Preferences {
 
         @Override
         public void setString(String s, String s1) {
-            keyInfo.get(PreferenceType.STRING).add(s);
+            keysByType.get(PreferenceType.STRING).add(s);
             preferences.setString(s, s1);
         }
 
         @Override
         public void deleteString(String s) {
-            keyInfo.get(PreferenceType.STRING).remove(s);
+            keysByType.get(PreferenceType.STRING).remove(s);
             preferences.deleteString(s);
         }
 
@@ -331,13 +331,13 @@ public class HierarchicPreferences implements Preferences {
 
         @Override
         public void setBoolean(String s, boolean b) {
-            keyInfo.get(PreferenceType.BOOLEAN).add(s);
+            keysByType.get(PreferenceType.BOOLEAN).add(s);
             preferences.setBoolean(s, b);
         }
 
         @Override
         public void deleteBoolean(String s) {
-            keyInfo.get(PreferenceType.BOOLEAN).remove(s);
+            keysByType.get(PreferenceType.BOOLEAN).remove(s);
             preferences.deleteBoolean(s);
         }
 
@@ -353,13 +353,13 @@ public class HierarchicPreferences implements Preferences {
 
         @Override
         public void setByte(String s, byte b) {
-            keyInfo.get(PreferenceType.BYTE).add(s);
+            keysByType.get(PreferenceType.BYTE).add(s);
             preferences.setByte(s, b);
         }
 
         @Override
         public void deleteByte(String s) {
-            keyInfo.get(PreferenceType.BYTE).remove(s);
+            keysByType.get(PreferenceType.BYTE).remove(s);
             preferences.deleteByte(s);
         }
 
@@ -375,13 +375,13 @@ public class HierarchicPreferences implements Preferences {
 
         @Override
         public void setShort(String s, short i) {
-            keyInfo.get(PreferenceType.SHORT).add(s);
+            keysByType.get(PreferenceType.SHORT).add(s);
             preferences.setShort(s, i);
         }
 
         @Override
         public void deleteShort(String s) {
-            keyInfo.get(PreferenceType.SHORT).remove(s);
+            keysByType.get(PreferenceType.SHORT).remove(s);
             preferences.deleteShort(s);
         }
 
@@ -397,13 +397,13 @@ public class HierarchicPreferences implements Preferences {
 
         @Override
         public void setInteger(String s, int i) {
-            keyInfo.get(PreferenceType.INTEGER).add(s);
+            keysByType.get(PreferenceType.INTEGER).add(s);
             preferences.setInteger(s, i);
         }
 
         @Override
         public void deleteInteger(String s) {
-            keyInfo.get(PreferenceType.INTEGER).remove(s);
+            keysByType.get(PreferenceType.INTEGER).remove(s);
             preferences.deleteInteger(s);
         }
 
@@ -419,13 +419,13 @@ public class HierarchicPreferences implements Preferences {
 
         @Override
         public void setLong(String s, long l) {
-            keyInfo.get(PreferenceType.LONG).add(s);
+            keysByType.get(PreferenceType.LONG).add(s);
             preferences.setLong(s, l);
         }
 
         @Override
         public void deleteLong(String s) {
-            keyInfo.get(PreferenceType.LONG).remove(s);
+            keysByType.get(PreferenceType.LONG).remove(s);
             preferences.deleteLong(s);
         }
 
