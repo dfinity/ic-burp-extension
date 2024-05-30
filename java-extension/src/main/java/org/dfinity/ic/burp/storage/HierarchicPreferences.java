@@ -1,8 +1,10 @@
 package org.dfinity.ic.burp.storage;
 
 import burp.api.montoya.persistence.Preferences;
+import org.dfinity.ic.burp.model.PreferenceType;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -12,7 +14,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class HierarchicPreferences implements Preferences {
-    private static final String KEY_SEPARATOR = "#";
+    public static final String KEY_SEPARATOR = "#";
     private static final String TYPE_VALUE_SEPARATOR = "$";
     private static final String RESERVED_CHARS = KEY_SEPARATOR + TYPE_VALUE_SEPARATOR;
     private static final String BOOLEAN_TYPE = "Boolean";
@@ -235,12 +237,14 @@ public class HierarchicPreferences implements Preferences {
         }
     }
 
-    public void store(Preferences preferences, String key) {
+    public Map<PreferenceType, Set<String>> store(Preferences preferences, String key) {
         assertValid(key);
         if (isEmpty())
             throw new RuntimeException("trying to store empty object");
 
-        storeInternal(preferences, key);
+        WrappedKeyTrackingPreferences wrappedPref = new WrappedKeyTrackingPreferences(preferences);
+        storeInternal(wrappedPref, key);
+        return wrappedPref.getKeyInfo();
     }
 
     private void loadInternal(Preferences preferences, String prefix) {
@@ -281,5 +285,153 @@ public class HierarchicPreferences implements Preferences {
     @Override
     public int hashCode() {
         return Objects.hash(booleans, bytes, integers, longs, shorts, strings, children);
+    }
+
+    private static class WrappedKeyTrackingPreferences implements Preferences {
+        private final Preferences preferences;
+        private final Map<PreferenceType, Set<String>> keyInfo = new HashMap<>();
+
+        public WrappedKeyTrackingPreferences(Preferences preferences) {
+            this.preferences = preferences;
+            for (var type : PreferenceType.values()) {
+                keyInfo.put(type, new HashSet<>());
+            }
+        }
+
+        public Map<PreferenceType, Set<String>> getKeyInfo() {
+            return keyInfo;
+        }
+
+        @Override
+        public String getString(String s) {
+            return preferences.getString(s);
+        }
+
+        @Override
+        public void setString(String s, String s1) {
+            keyInfo.get(PreferenceType.STRING).add(s);
+            preferences.setString(s, s1);
+        }
+
+        @Override
+        public void deleteString(String s) {
+            keyInfo.get(PreferenceType.STRING).remove(s);
+            preferences.deleteString(s);
+        }
+
+        @Override
+        public Set<String> stringKeys() {
+            return preferences.stringKeys();
+        }
+
+        @Override
+        public Boolean getBoolean(String s) {
+            return preferences.getBoolean(s);
+        }
+
+        @Override
+        public void setBoolean(String s, boolean b) {
+            keyInfo.get(PreferenceType.BOOLEAN).add(s);
+            preferences.setBoolean(s, b);
+        }
+
+        @Override
+        public void deleteBoolean(String s) {
+            keyInfo.get(PreferenceType.BOOLEAN).remove(s);
+            preferences.deleteBoolean(s);
+        }
+
+        @Override
+        public Set<String> booleanKeys() {
+            return preferences.booleanKeys();
+        }
+
+        @Override
+        public Byte getByte(String s) {
+            return preferences.getByte(s);
+        }
+
+        @Override
+        public void setByte(String s, byte b) {
+            keyInfo.get(PreferenceType.BYTE).add(s);
+            preferences.setByte(s, b);
+        }
+
+        @Override
+        public void deleteByte(String s) {
+            keyInfo.get(PreferenceType.BYTE).remove(s);
+            preferences.deleteByte(s);
+        }
+
+        @Override
+        public Set<String> byteKeys() {
+            return preferences.byteKeys();
+        }
+
+        @Override
+        public Short getShort(String s) {
+            return preferences.getShort(s);
+        }
+
+        @Override
+        public void setShort(String s, short i) {
+            keyInfo.get(PreferenceType.SHORT).add(s);
+            preferences.setShort(s, i);
+        }
+
+        @Override
+        public void deleteShort(String s) {
+            keyInfo.get(PreferenceType.SHORT).remove(s);
+            preferences.deleteShort(s);
+        }
+
+        @Override
+        public Set<String> shortKeys() {
+            return preferences.shortKeys();
+        }
+
+        @Override
+        public Integer getInteger(String s) {
+            return preferences.getInteger(s);
+        }
+
+        @Override
+        public void setInteger(String s, int i) {
+            keyInfo.get(PreferenceType.INTEGER).add(s);
+            preferences.setInteger(s, i);
+        }
+
+        @Override
+        public void deleteInteger(String s) {
+            keyInfo.get(PreferenceType.INTEGER).remove(s);
+            preferences.deleteInteger(s);
+        }
+
+        @Override
+        public Set<String> integerKeys() {
+            return preferences.integerKeys();
+        }
+
+        @Override
+        public Long getLong(String s) {
+            return preferences.getLong(s);
+        }
+
+        @Override
+        public void setLong(String s, long l) {
+            keyInfo.get(PreferenceType.LONG).add(s);
+            preferences.setLong(s, l);
+        }
+
+        @Override
+        public void deleteLong(String s) {
+            keyInfo.get(PreferenceType.LONG).remove(s);
+            preferences.deleteLong(s);
+        }
+
+        @Override
+        public Set<String> longKeys() {
+            return preferences.longKeys();
+        }
     }
 }

@@ -12,6 +12,7 @@ import org.dfinity.ic.burp.model.IiState;
 import org.dfinity.ic.burp.model.InternetIdentities;
 import org.dfinity.ic.burp.model.InternetIdentity;
 import org.dfinity.ic.burp.model.JWKIdentity;
+import org.dfinity.ic.burp.model.PreferenceType;
 import org.dfinity.ic.burp.tools.IcTools;
 import org.dfinity.ic.burp.tools.model.IcToolsException;
 import org.dfinity.ic.burp.tools.model.InterfaceType;
@@ -19,6 +20,9 @@ import org.dfinity.ic.burp.tools.model.InterfaceType;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+
+import static org.dfinity.ic.burp.storage.HierarchicPreferences.KEY_SEPARATOR;
 
 public class DataPersister {
     public static final String IDENTITIES_KEY = "Identities";
@@ -208,33 +212,46 @@ public class DataPersister {
        Name of the IiState enum   Pem file of the passkey    Date II was created      Date the passkey was activated
                                                                                       and not present if not yet activated.
         */
-        log.logToOutput("Storing identities to Burp preference file.");
-        HierarchicPreferences icPref = new HierarchicPreferences();
-        HierarchicPreferences identitiesPref = new HierarchicPreferences();
-        icPref.setChildObject(IDENTITIES_KEY, identitiesPref);
+        Map<PreferenceType, Set<String>> createdKeys;
+        if (identities.getIdentities().isEmpty()) {
+            createdKeys = Map.of();
+        } else {
+            log.logToOutput("Storing identities to Burp preference file.");
+            HierarchicPreferences icPref = new HierarchicPreferences();
+            HierarchicPreferences identitiesPref = new HierarchicPreferences();
+            icPref.setChildObject(IDENTITIES_KEY, identitiesPref);
 
-        for (Map.Entry<String, InternetIdentity> iiEntry : identities.getIdentities().entrySet()) {
-            log.logToOutput("Storing identities with anchor: " + iiEntry.getKey());
-            HierarchicPreferences iiPref = new HierarchicPreferences();
-            InternetIdentity ii = iiEntry.getValue();
+            for (Map.Entry<String, InternetIdentity> iiEntry : identities.getIdentities().entrySet()) {
+                log.logToOutput("Storing identities with anchor: " + iiEntry.getKey());
+                HierarchicPreferences iiPref = new HierarchicPreferences();
+                InternetIdentity ii = iiEntry.getValue();
 
-            iiPref.setString(STATE_KEY, ii.getState().name());
-            // The pem file of a passkey should never be empty.
-            iiPref.setString(PASSKEY_KEY, ii.getPasskey().getPem().orElseThrow());
-            iiPref.setLong(CREATION_DATE_KEY, ii.creationDate().getTime());
-            Optional<Date> activationDate = ii.activationDate();
-            activationDate.ifPresent(date -> iiPref.setLong(ACTIVATION_DATE_KEY, date.getTime()));
-            log.logToOutput("Adding identity with: ("
-                    + iiEntry.getKey() + ", "
-                    + ii.getPasskey().getPem().orElseThrow() + ", "
-                    + ii.getState().name() + ", "
-                    + ii.creationDate() + ", "
-                    + activationDate + ")");
+                iiPref.setString(STATE_KEY, ii.getState().name());
+                // The pem file of a passkey should never be empty.
+                iiPref.setString(PASSKEY_KEY, ii.getPasskey().getPem().orElseThrow());
+                iiPref.setLong(CREATION_DATE_KEY, ii.creationDate().getTime());
+                Optional<Date> activationDate = ii.activationDate();
+                activationDate.ifPresent(date -> iiPref.setLong(ACTIVATION_DATE_KEY, date.getTime()));
+                log.logToOutput("Adding identity with: ("
+                        + iiEntry.getKey() + ", "
+                        + ii.getPasskey().getPem().orElseThrow() + ", "
+                        + ii.getState().name() + ", "
+                        + ii.creationDate() + ", "
+                        + activationDate + ")");
 
-            log.logToOutput("Storing identities with HierarchicPreferences: " + iiPref);
-            identitiesPref.setChildObject(iiEntry.getKey(), iiPref);
+                log.logToOutput("Storing identities with HierarchicPreferences: " + iiPref);
+                identitiesPref.setChildObject(iiEntry.getKey(), iiPref);
+            }
+            createdKeys = icPref.store(preferences, IC_KEY);
         }
-        icPref.store(preferences, IC_KEY);
+
+        new PersisterUtils(preferences).deleteMatchingPreferences((type, key) -> {
+            if (!key.startsWith(IC_KEY + KEY_SEPARATOR)) {
+                // we do not delete preferences outside our namespace
+                return false;
+            }
+            return !createdKeys.getOrDefault(type, Set.of()).contains(key);
+        });
     }
 
     public InternetIdentities getInternetIdentities() {
