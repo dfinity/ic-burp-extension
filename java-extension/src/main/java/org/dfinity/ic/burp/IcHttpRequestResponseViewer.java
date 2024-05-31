@@ -125,9 +125,14 @@ public class IcHttpRequestResponseViewer implements ExtensionProvidedHttpRequest
                 return false;
             }
 
-            // TODO This throws an exception from time to time. See notes for stacktrace.
-            // TODO java.lang.IllegalArgumentException: fromIndex(1) > toIndex(0)
-            HttpHeader icDecodedHeader = requestResponse.request().header(IcBurpExtension.IC_DECODED_HEADER_NAME);
+            final HttpHeader icDecodedHeader;
+            try {
+                icDecodedHeader = requestResponse.request().header(IcBurpExtension.IC_DECODED_HEADER_NAME);
+            } catch (IllegalArgumentException e) {
+                // This throws an exception from time to time. See notes for stacktrace.
+                // java.lang.IllegalArgumentException: fromIndex(1) > toIndex(0)
+                return false;
+            }
             if (icDecodedHeader != null && icDecodedHeader.value().equals("True")) {
                 return false;
             }
