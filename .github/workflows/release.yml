@@ -24,12 +24,12 @@ jobs:
     #   with:
     #     java-version: '17'
     #     distribution: 'temurin'
+    - name: Clean environment
+      run: cargo clean
     - name: Build rust OSX Intel lib
-      run: cargo clean && cargo build --release --target x86_64-apple-darwin # && cargo build --release --target aarch64-apple-darwin && 
+      run: cargo build --release --target x86_64-apple-darwin
     - name: Build rust OSX ARM lib
-      run: cargo clean && cargo clean && cargo build --release --target aarch64-apple-darwin
-    - name: Dbg find dylib
-      run: find target -name librust_lib.dylib
+      run: cargo build --release --target aarch64-apple-darwin
     - name: Create rust OSX universal lib
       run: lipo -create -output librust_lib.dylib target/x86_64-apple-darwin/release/librust_lib.dylib target/aarch64-apple-darwin/release/librust_lib.dylib
     - name: Upload rust OSX universal lib
