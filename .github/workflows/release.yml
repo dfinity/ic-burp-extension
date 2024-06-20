@@ -87,9 +87,4 @@ jobs:
       - name: Create release # TODO: replace create $GITHUB_REF_NAME and add --verify-tag \
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "test/0.1" \ 
-            --repo="dfinity/ic-burp-extension" \
-            --title="v0.1" \
-            --generate-notes \
-            ./build/libs/ic-burp-extension-0.1.jar
+        run: gh release create "test/0.1" --repo="dfinity/ic-burp-extension" --title="v0.1" --generate-notes ./build/libs/ic-burp-extension-0.1.jar
