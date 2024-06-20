@@ -51,8 +51,16 @@ jobs:
         run: cargo clean
       - name: Build rust linux lib
         run: cargo build --release --target x86_64-unknown-linux-gnu
+      - name: Copy rust linux lib to java resource
+        run: cp target/x86_64-unknown-linux-gnu/release/librust_lib.so ../java-extension/src/main/resources/
+      - name: Download rust OSX universal lib
+        uses: actions/download-artifact@v4
+        with:
+          name: librust_lib.dylib
+          path: ./java-extension/src/main/resources/
       - name: dbg ls
-        run: ls target/x86_64-unknown-linux-gnu/release
+        working-directory: ./java-extension
+        run: ls -la ./src/main/resources/
     # - name: Build & test Java
     #   working-directory: ./java-extension
     #   run: ./gradlew clean jar
