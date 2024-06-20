@@ -53,6 +53,8 @@ jobs:
   #         path: ./rust-lib/target/x86_64-unknown-linux-gnu/release/librust_lib.so
 
   build-java-publish:
+    permissions:
+      contents: write # needed for creating a release
     runs-on: ubuntu-latest
     # needs: [build-lib-macos, build-lib-ubuntu]
     defaults:
