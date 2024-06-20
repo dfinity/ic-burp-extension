@@ -92,4 +92,4 @@ jobs:
             --repo=$GITHUB_REPOSITORY \
             --title=${{ steps.get_version.outputs.version }} \
             --generate-notes \
-            build/libs/ic-burp-extension-${{ steps.get_version.outputs.version }}.jar
+            ./build/libs/ic-burp-extension-0.1.jar
