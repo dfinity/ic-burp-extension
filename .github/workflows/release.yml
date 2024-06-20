@@ -12,11 +12,12 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-
+    defaults:
+      run:
+        working-directory: ./rust-lib
     steps:
     - uses: actions/checkout@v3
     - name: Install rust targets
-      working-directory: ./rust-lib
       run: rustup target install x86_64-apple-darwin && rustup target install aarch64-apple-darwin
     # - name: Set up JDK 17
     #   uses: actions/setup-java@v3
@@ -24,19 +25,18 @@ jobs:
     #     java-version: '17'
     #     distribution: 'temurin'
     - name: Build rust OSX Intel lib
-      working-directory: ./rust-lib
       run: cargo clean && cargo build --release --target x86_64-apple-darwin # && cargo build --release --target aarch64-apple-darwin && 
     - name: Build rust OSX ARM lib
-      working-directory: ./rust-lib
       run: cargo clean && cargo clean && cargo build --release --target aarch64-apple-darwin
+    - name: Dbg find dylib
+      run: find target -name librust_lib.dylib
     - name: Create rust OSX universal lib
-      working-directory: ./rust-lib
       run: lipo -create -output librust_lib.dylib target/x86_64-apple-darwin/release/librust_lib.dylib target/aarch64-apple-darwin/release/librust_lib.dylib
     - name: Upload rust OSX universal lib
       uses: actions/upload-artifact@v4
       with:
         name: librust_lib.dylib
-        path: librust_lib.dylib
+        path: ./rust-lib/librust_lib.dylib
     # - name: Build & test Java
     #   working-directory: ./java-extension
     #   run: ./gradlew clean jar
