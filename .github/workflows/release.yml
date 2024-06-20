@@ -69,8 +69,7 @@ jobs:
         run: ./gradlew clean jar
       - name: Get version from tag
         id: get_version
-        run: echo "version=0.1" >> $GITHUB_OUTPUT #$(echo $GITHUB_REF | cut -d / -f 4) TODO: replace hardcoded version
+        run: echo "version=0.2" >> $GITHUB_OUTPUT #$(echo $GITHUB_REF | cut -d / -f 4) TODO: replace hardcoded version
       - name: Check version
         working-directory: ./java-extension
-        run: test -f build/libs/ic-burp-extension-${{ steps.get_version.outputs.VERSION }}.jar
-        
+        run: test -f build/libs/ic-burp-extension-${{ steps.get_version.outputs.version }}.jar
