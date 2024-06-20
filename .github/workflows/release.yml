@@ -32,7 +32,7 @@ jobs:
     - name: Create rust OSX universal lib
       working-directory: ./rust-lib
       run: lipo -create -output librust_lib.dylib target/x86_64-apple-darwin/release/librust_lib.dylib target/aarch64-apple-darwin/release/librust_lib.dylib
-    - name: Upload OSX universal lib
+    - name: Upload rust OSX universal lib
       uses: actions/upload-artifact@v4
       with:
         name: librust_lib.dylib
