@@ -50,7 +50,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: librust_lib.so
-          path: ./target/x86_64-unknown-linux-gnu/release/librust_lib.so
+          path: ./rust-lib/target/x86_64-unknown-linux-gnu/release/librust_lib.so
 
   build-java-publish:
     runs-on: ubuntu-latest
