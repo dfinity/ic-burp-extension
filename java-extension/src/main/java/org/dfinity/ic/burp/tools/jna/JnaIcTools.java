@@ -116,7 +116,7 @@ public class JnaIcTools implements IcTools {
 
     public interface CIcTools extends Library {
         String LIB_NAME = "rust_lib";
-        CIcTools INSTANCE = Native.load((Platform.isMac() ? "lib" : "") + LIB_NAME + "." + (Platform.isWindows() ? "dll" : Platform.isMac() ? "dylib" : "so"), CIcTools.class);
+        CIcTools INSTANCE = Native.load((Platform.isMac() || Platform.isLinux() ? "lib" : "") + LIB_NAME + "." + (Platform.isWindows() ? "dll" : Platform.isMac() ? "dylib" : "so"), CIcTools.class);
 
         JnaDiscoverCanisterInterfaceResult.ByValue discover_canister_interface(String canisterId);
 

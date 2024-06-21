@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "org.dfinity"
-version = "0.1-SNAPSHOT"
+version = "0.1.0-alpha-SNAPSHOT"
 
 repositories {
     mavenCentral()
