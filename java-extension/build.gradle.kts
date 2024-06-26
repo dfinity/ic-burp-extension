@@ -9,6 +9,14 @@ repositories {
     mavenCentral()
 }
 
+// this locks all dependencies in gradle.lockfile
+// build will fail if dependencies are changed
+// to update lockfile after changing dependencies run:
+// ./gradlew dependencies --write-locks
+dependencyLocking {
+    lockAllConfigurations()
+}
+
 dependencies {
     implementation("net.portswigger.burp.extensions:montoya-api:2023.10.3")
     implementation("net.java.dev.jna:jna:5.13.0")
