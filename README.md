@@ -1,6 +1,6 @@
 # ic-burp-extension
 
-A burp plugin that makes pentesting of [ICP](https://internetcomputer.org) dapps a breeze.
+A Burp plugin that makes pentesting of [ICP](https://internetcomputer.org) Dapps a breeze.
 
 ---
 
@@ -61,7 +61,7 @@ Below the project data management buttons is a list of all canisters for which i
 **IDL content view.** The rightmost section shows the contents of the IDL that was selected in the middle section.
 
 ### Managing Internet Identities
-The extension supports sending ICP messages from the repeater and intruder tool (see section TODO). Non-anonymous messages need to be signed. For this internet identities (II) can be used. In order to sign messages with an II a passkey must be generated and registered with the II. For this a UI is provided under the `IC` tab and the `Internet Identity` subtab:
+The extension supports sending ICP messages from the repeater and intruder tool (see section [Sending Requests](#sending-requests-from-intruder-or-repeater)). Non-anonymous messages need to be signed. For this internet identities (II) can be used. In order to sign messages with an II, a passkey must be generated and registered with the II. For this a UI is provided under the `IC` tab and the `Internet Identity` subtab:
 
 ![II Management UI](pics/quickstart-ii-management.png "II Management UI")
 
@@ -71,13 +71,13 @@ The `Remove` button deletes the passkey of the selected II from the extension st
 
 The `Refresh IIs` button checks for all IIs if the passkey that the extension has stored is still registered. If not it changes the state to `Deactivated`. To enable it again the `Reactivate selected II` button can be used which tries to add a new passkey to the selected II.
 
-The `Get delegation` button generates a delegated identity for the selected II under the provided hostname. This is useful if the same identity should be used in scripts for fully automated testing. Rust sample code that shows how to create an identity from the generated string can be found [here](https://gist.github.com/tmu0/3c31a7064e9a5d9d326a473025727a49).
+The `Get delegation` button generates a delegated identity for the selected II under the provided hostname. This is useful if the same identity should be used in scripts for fully automated testing. [Rust sample code](https://gist.github.com/tmu0/3c31a7064e9a5d9d326a473025727a49) demonstrates how to create an identity from the generated string.
 
 
 ### Sending requests from Intruder or Repeater
 It is possible to modify captured requests and send them again. The extension will make sure that the metadata fields are properly updated and - if desired - the request is correctly signed. Currently signing is only supported for Internet Identities which need to be [registered first](#managing-internet-identities).
 The process works as follows:
-1. Capture some requests in the `HTTP history` as described [here](#viewing-decoded-requests-and-responses).
+1. Capture some requests in the `HTTP history` as described in the [Viewing Requests](#viewing-decoded-requests-and-responses) section.
 
 2. Right-click on a request that should be resent and select `Extensions -> IC Burp Extension -> Send to intruder/repeater`
 ![Send to Tool](pics/quickstart-sending-requests-send-to-tool.png "Send to Tool")
