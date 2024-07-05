@@ -15,16 +15,16 @@ A Burp plugin that makes pentesting of [ICP](https://internetcomputer.org) Dapps
     - [Sending requests from Intruder or Repeater](#sending-requests-from-intruder-or-repeater)
 
 ## Features
-#### Decode requests and responses
+### Decode requests and responses
 ![Decode requests and responses](pics/feature-endecode.png "Decode requests and responses")
 
-#### Send modified requests with your [internet identity](https://identity.ic0.app)
+### Send modified requests with your [internet identity](https://identity.ic0.app)
 ![Send modified requets](pics/feature-modify-request.png "Send modified requests")
 
-#### Manage multiple internet identities
+### Manage multiple internet identities
 ![Manage multiple internet identities](pics/feature-ii-anchors.png "Manage multiple internet identities")
 
-#### Manage canister interfaces with automatic discovery & manual import
+### Manage canister interfaces with automatic discovery & manual import
 ![Manage canister interfaces](pics/feature-canister-idls.png "Manage canister interfaces")
 
 ## System Requirements
