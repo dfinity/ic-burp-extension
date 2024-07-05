@@ -1,4 +1,4 @@
-# ic-burp-extension
+# IC Burp Extension
 
 A Burp plugin that makes pentesting of [ICP](https://internetcomputer.org) Dapps a breeze.
 
@@ -8,6 +8,11 @@ A Burp plugin that makes pentesting of [ICP](https://internetcomputer.org) Dapps
 - [Features](#features)
 - [System Requirements](#system-requirements)
 - [Quickstart](#quickstart)
+    - [Installation](#installation)
+    - [Viewing decoded requests and responses](#viewing-decoded-requests-and-responses)
+    - [Managing canister interfaces](#managing-canister-interfaces)
+    - [Managing Internet Identities](#managing-internet-identities)
+    - [Sending requests from Intruder or Repeater](#sending-requests-from-intruder-or-repeater)
 
 ## Features
 #### Decode requests and responses
