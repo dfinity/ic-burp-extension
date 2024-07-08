@@ -106,6 +106,10 @@ jobs:
         run: echo "version=$(echo $GITHUB_REF | cut -d / -f 4)" >> $GITHUB_OUTPUT
       - name: Check version
         run: test -f build/libs/ic-burp-extension-${{ steps.get_version.outputs.version }}.jar
+      - name: Create build attestation for jar
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: ./java-extension/build/libs/ic-burp-extension-${{ steps.get_version.outputs.version }}.jar
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
