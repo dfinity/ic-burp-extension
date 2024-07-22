@@ -1,6 +1,6 @@
 # IC Burp Extension
 
-A Burp plugin that makes pentesting of [ICP](https://internetcomputer.org) Dapps a breeze.
+A Burp plugin that makes pentesting of [ICP](https://internetcomputer.org) dapps a breeze.
 
 ---
 
@@ -45,28 +45,28 @@ The following platforms are currently supported:
 1. Open the `Proxy` tab and the `HTTP history` subtab.
 2. If the history is empty click on the `Open browser` button.
 3. In the browser open [NNS Dapp](https://nns.ic0.app).
-4. In Burp make sure that binary content is not filtered, by clicking on `Filter settings` and enabling `Other binary`:
+4. In Burp make sure that binary content is not filtered, by clicking on `Filter settings` and enabling `Other binary` or simply click `Show all` followed by `Apply`:
 ![HTTP History - Enable binary content](pics/quickstart-endecode-http-history-filter.png "HTTP History - Enable binary content")
-5. Click on an ICP request that contains encoded CBOR content. In the request/response section you should find a `IC Request`/`IC Response` tab if the extension has correctly identified the request/response. Clicking on this tab shows the decoded content:
+5. Click on an ICP request (URI ending in /query, /call or /read_state) that contains encoded CBOR content. In the request/response section you should find a `IC Request`/`IC Response` tab if the extension has correctly identified the request/response. Clicking on this tab shows the decoded content:
 ![View decoded request/response](pics/quickstart-endecode-req-resp-view.png "View decoded request/response")
 
 ### Managing canister interfaces
-In order to be able to encode and decode ICP messages to/from canisters, the extension needs to know the canister interface of the recipient canister. Some canisters expose their canister interface while others don't. The interfaces can be managed by clicking on the `IC` tab and the `IDL Management` subtab:
+In order to be able to fully encode and decode ICP messages to/from canisters, the extension needs to know the canister interface of the recipient canister. [Some canisters expose their canister interface while others don't](https://forum.dfinity.org/t/rfc-canister-metadata-standard/16280#candidservice-10). The interfaces can be managed by clicking on the `IC` tab and the `IDL Management` subtab:
 
 ![IDL Management UI](pics/quickstart-idl-management.png "IDL Management UI")
 
 The UI is split into three parts from left to right:
 
-**Project data management and canister selection.** With the buttons at the top, the canister interface data can be written into or removed from the project file which was selected when Burp was started. All data that is not written into a project file is lost when Burp is closed.
+**Project data management and canister selection.** With the buttons at the top, the canister interface data can be written into or removed from the project file which was selected when Burp was started. Burp also saves this data whenever it closes properly.
 
-Below the project data management buttons is a list of all canisters for which interface information is available or where interactions were detected. The buttons at the bottom allow to add additional canisters to that list or automatically try to fetch canister interface information for all/single canister(s).
+Below the project data management buttons is a list of all canisters for which interactions were detected, some of which might have automatically resolved the interface definition language (IDL) file. The buttons at the bottom allow to add additional canisters to that list or automatically try to fetch canister interface information for all/single canister(s).
 
-**IDL selection.** In the middle section information about the interfaces for the canister selected in the left section are shown. Clicking on an interface reveals its content in the right section. If the canister exposes an interface the entry `AUTOMATIC` will be present. The `Load IDL` button allows to load an interface from a file which can be helpful if no interface is exposed or the exposed interface is not accurate. To change the interface which the extension uses during en/decoding, select an entry and press the `Set as active` button.
+**IDL selection.** The middle section shows the different IDL files for the canister selected in the left section. Clicking on an interface reveals its content on the right side. If the canister exposes an interface the entry `AUTOMATIC` will be present. If no interface is exposed or the automatically retrieved interface is inaccurate, the `Load IDL` button allows to load a custom interface from a file. Sometimes such an IDL file can be obtained from the open source repository of the project or by asking the developers. To change which interface the extension uses during en/decoding, select an entry and press the `Set as active` button.
 
-**IDL content view.** The rightmost section shows the contents of the IDL that was selected in the middle section.
+**IDL content view.** The rightmost section shows the contents of the IDL that was selected in the middle section. The contents of the IDL can be modified in this section. Any changes are automatically stored and used. Note that IDL syntax errors are not detected and will lead to en/deconding erros which might only be visible at a later point in time.
 
 ### Managing Internet Identities
-The extension supports sending ICP messages from the repeater and intruder tool (see section [Sending Requests](#sending-requests-from-intruder-or-repeater)). Non-anonymous messages need to be signed. For this internet identities (II) can be used. In order to sign messages with an II, a passkey must be generated and registered with the II. For this a UI is provided under the `IC` tab and the `Internet Identity` subtab:
+The extension supports sending ICP messages from the repeater and intruder tool (see section [Sending Requests](#sending-requests-from-intruder-or-repeater)). [Non-anonymous messages](https://internetcomputer.org/docs/current/references/ic-interface-spec/#authentication) need to be signed. For this internet identities (II) can be used. To allow BurpSuite to sign messages with an II, a passkey must be generated and registered with the II. For this a UI is provided under the `IC` tab and the `Internet Identity` subtab:
 
 ![II Management UI](pics/quickstart-ii-management.png "II Management UI")
 
@@ -80,7 +80,7 @@ The `Get delegation` button generates a delegated identity for the selected II u
 
 
 ### Sending requests from Intruder or Repeater
-It is possible to modify captured requests and send them again. The extension will make sure that the metadata fields are properly updated and - if desired - the request is correctly signed. Currently signing is only supported for Internet Identities which need to be [registered first](#managing-internet-identities).
+It is possible to modify captured requests and send them again. The extension will make sure that the metadata fields are properly updated, the request is encoded and - if desired - is correctly signed. Currently signing is only supported for Internet Identities which need to be [registered first](#managing-internet-identities).
 The process works as follows:
 1. Capture some requests in the `HTTP history` as described in the [Viewing Requests](#viewing-decoded-requests-and-responses) section.
 
@@ -89,9 +89,9 @@ The process works as follows:
 
 3. Open the tool to which the request was sent (Repeater in the example)
 ![Request in Repeater](pics/quickstart-sending-requests-repeater-prepare.png)
-The headers in line 17-19 were added by the extension. `X-Ic-Decoded` is just a marker that is used to decide if a message needs to be encoded before sending (no need to change this). `X-Ic-Sign-Identity` and `X-Ic-Frontend-Hostname` control the signing behavior: In the example the principal that is derived from the II anchor `2143428` under hostname `https://nns.ic0.app` is used, i.e., the principal that this II anchor has in the NNS Dapp. The extension has selected these values because the original request was also signed by this principal. They can be changed before the request is sent, however it must be ensured that a passkey was registered for the used II anchor (see [II management](#managing-internet-identities)). If the request should not be signed, i.e., the sender should be the anonymous principal, the value `anonymous` can be used for `X-Ic-Sign-Identity`. Note that all three headers are removed before the message is sent to the IC.
+The headers in line 17-19 were added by the extension. `X-Ic-Decoded` is just a marker that is used to decide if a message needs to be encoded before sending (no need to change this). `X-Ic-Sign-Identity` and `X-Ic-Frontend-Hostname` control the signing behavior: In the example, the principal that is derived from the II anchor `2143428` under hostname `https://nns.ic0.app` is used, i.e., the principal that this II anchor has in the NNS Dapp. The extension has selected these values because the original request was also signed by this principal. They can be changed before the request is sent. To change the Identity, it must be ensured that a passkey was registered for the used II anchor (see [II management](#managing-internet-identities)). If the request should not be signed, i.e., the sender should be the anonymous principal, the value `anonymous` can be used for `X-Ic-Sign-Identity`. Do not change the `X-Ic-Frontend-Hostname` unless you understand [II principal derivation](https://internetcomputer.org/docs/current/references/ii-spec/#the-get_principal-query-method). Note that all three headers are removed before the message is sent to the IC.
 
 4. (Optional) Adjust the signing headers.
 5. (Optional) Adjust the message. In the example the `rename_sub_account` method of the NNS canister is called, which renames the NNS Dapp wallet of the user to the name `My Wallet` in the original request. We will inject the `<h1>` HTML tag into the wallet name to test if this gets rendered by the NNS Dapp frontend.
-6. Hit the send button and wait for the reply. In the case of a `call` request, the extension will automatically call `read_state` until the reply is available and provide the decoded candid response as the response body in Burp:
+6. Hit the send button and wait for the reply. In the case of a `call` request, the extension will automatically call `read_state` until the [reply is available](https://internetcomputer.org/docs/current/references/ic-interface-spec#http-call) and provide the decoded candid response as the response body in Burp:
 ![Request and Response in Repeater](pics/quickstart-sending-requests-repeater-send.png "Request and Response in Repeater")
