@@ -18,7 +18,7 @@ dependencyLocking {
 }
 
 dependencies {
-    implementation("net.portswigger.burp.extensions:montoya-api:2023.10.3")
+    implementation("net.portswigger.burp.extensions:montoya-api:2024.7")
     implementation("net.java.dev.jna:jna:5.13.0")
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
     implementation("com.nimbusds:nimbus-jose-jwt:9.37.3")
